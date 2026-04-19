@@ -8,6 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     
     <style>
         :root { 
@@ -53,6 +54,8 @@
         .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
         .status-in { background: #d4edda; color: #155724; }
         .status-none { background: #f8d7da; color: #721c24; }
+        
+        #reader { width: 100%; border-radius: 15px; overflow: hidden; margin-top: 15px; display: none; }
     </style>
 </head>
 <body>
@@ -70,6 +73,10 @@
         <div class="scanner-card">
             <h2 style="color:var(--cr-blue);">Registro de Entrada/Salida</h2>
             <input type="text" id="lector" class="input-scan" placeholder="Escanee carné..." autofocus>
+            
+            <div id="reader"></div>
+            <button id="btnCamara" class="btn btn-i" style="width:100%; margin-top:15px;" onclick="toggleCamara()">📱 USAR CÁMARA DEL CELULAR</button>
+
             <div id="resBox" style="margin-top:20px; display:none; padding:20px; border-radius:15px; border: 2px solid #ddd;">
                 <h2 id="resNombre"></h2>
                 <h3 id="resMov"></h3>
@@ -90,7 +97,7 @@
                 <div style="background:#f9f9f9; padding:15px; border-radius:12px; border:1px solid #eee; margin-bottom:15px;">
                     <h3 id="parentStudentName" style="margin:0; color:var(--primary);"></h3>
                     <p id="parentStudentPuesto" style="margin:5px 0; font-weight:bold; color:var(--cr-red);"></p>
-                    <button id="btnConsultaWA" class="btn btn-w" style="width:100%; margin-top:10px;">💬 ENVIAR MENSAJE A LA JUNTA</button>
+                    <button id="btnConsultaWA" class="btn btn-w" style="width:100%; margin-top:10px;">💬 ENVIAR CONSULTA</button>
                 </div>
                 <div id="parentLogList" style="border: 1px solid #eee; border-radius:10px; max-height:200px; overflow-y:auto; background:white;"></div>
             </div>
@@ -101,6 +108,7 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h1 style="color:var(--primary); margin:0;">Gestión Administrativa</h1>
             <div style="display:flex; gap:10px;">
+                <button class="btn btn-s" onclick="editarNumeroJunta()">📱 TEL. OFICIAL</button>
                 <button class="btn btn-i" onclick="cambiarFondo()">🖼️ FONDO</button>
                 <button class="btn btn-w" onclick="cambiarPasswordMaster()">🔑 CLAVE MASTER</button>
                 <button class="btn btn-d" onclick="cerrarMaster()">❌ SALIR</button>
@@ -164,8 +172,8 @@
     </div>
 
     <script>
-        // CONFIGURACIÓN OFICIAL
-        const NUMERO_OFICIAL_JUNTA = "88888888"; // <-- CAMBIA ESTE NÚMERO POR EL DE LA JUNTA
+        // CONFIGURACIÓN INICIAL
+        let NUMERO_OFICIAL_JUNTA = "88888888"; 
 
         const firebaseConfig = { databaseURL: "https://escuela-la-carpio-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(firebaseConfig);
@@ -173,10 +181,14 @@
 
         let db = { personas: {} };
         let logsGlobal = [];
+        let html5QrCode; 
         let passMaster = localStorage.getItem('PASS_MASTER') || "CARPIO2026";
         let passEscaner = localStorage.getItem('PASS_SCAN') || "1234";
 
         document.getElementById('reportDate').valueAsDate = new Date();
+
+        // Obtener el número oficial de la base de datos si existe
+        database.ref('config/numeroOficial').on('value', (s) => { if(s.val()) NUMERO_OFICIAL_JUNTA = s.val(); });
 
         function coincideFecha(horaLog, fechaInputISO) {
             if(!horaLog || !fechaInputISO) return false;
@@ -195,6 +207,88 @@
             renderAlumnos(); 
         });
 
+        function editarNumeroJunta() {
+            let n = prompt("Ingrese el número de WhatsApp oficial (solo números):", NUMERO_OFICIAL_JUNTA);
+            if(n) {
+                database.ref('config/numeroOficial').set(n);
+                alert("Número oficial actualizado.");
+            }
+        }
+
+        // --- LÓGICA DE ESCANEO ---
+        function procesarEscaneo(id) {
+            id = id.trim();
+            if(db.personas[id]) {
+                const hISO = new Date().toISOString().split('T')[0];
+                const marcas = logsGlobal.filter(l => (l.fechaISO?l.fechaISO===hISO:coincideFecha(l.hora, hISO)) && l.id === id);
+                const tieneE = marcas.some(l => l.tipo === 'ENTRADA'), tieneS = marcas.some(l => l.tipo === 'SALIDA');
+                let tipo = "";
+                if (!tieneE) tipo = "ENTRADA"; else if (!tieneS) tipo = "SALIDA"; else { alert("Ya registró Entrada y Salida hoy."); return; }
+                database.ref('logs').push({ id: id, nombre: db.personas[id].nombre, hora: new Date().toLocaleString(), fechaISO: hISO, tipo: tipo });
+                const res = document.getElementById('resBox'); res.style.display = 'block'; res.style.background = tipo === "ENTRADA" ? "#d4edda" : "#f8d7da";
+                document.getElementById('resNombre').innerText = db.personas[id].nombre; document.getElementById('resMov').innerText = "✅ " + tipo;
+                setTimeout(() => res.style.display = 'none', 2000);
+            } else {
+                alert("Código no reconocido.");
+            }
+        }
+
+        document.getElementById('lector').addEventListener('keydown', (e) => {
+            if(e.key === 'Enter') {
+                procesarEscaneo(e.target.value);
+                e.target.value = '';
+            }
+        });
+
+        // --- LÓGICA DE CÁMARA (MOBILE) ---
+        function toggleCamara() {
+            const readerDiv = document.getElementById('reader');
+            if (readerDiv.style.display === 'none') {
+                readerDiv.style.display = 'block';
+                html5QrCode = new Html5Qrcode("reader");
+                html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 },
+                    (decodedText) => {
+                        procesarEscaneo(decodedText);
+                        pararCamara();
+                    }
+                ).catch(err => alert("Error de cámara: " + err));
+                document.getElementById('btnCamara').innerText = "❌ CERRAR CÁMARA";
+            } else {
+                pararCamara();
+            }
+        }
+
+        function pararCamara() {
+            if(html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('reader').style.display = 'none';
+                    document.getElementById('btnCamara').innerText = "📱 USAR CÁMARA DEL CELULAR";
+                });
+            }
+        }
+
+        // --- CONSULTA PADRES ---
+        function consultarPadre() {
+            const id = document.getElementById('parentInput').value.trim();
+            if(!db.personas[id]) return alert("Código no encontrado.");
+            const p = db.personas[id];
+            document.getElementById('parentStudentName').innerText = p.nombre;
+            document.getElementById('parentStudentPuesto').innerText = "Sección: " + (p.puesto || "N/A");
+            
+            document.getElementById('btnConsultaWA').onclick = () => { 
+                const mensaje = `Hola, quisiera realizar una consulta sobre el estudiante: ${p.nombre} (ID: ${id}).`;
+                window.open(`https://wa.me/506${NUMERO_OFICIAL_JUNTA}?text=${encodeURIComponent(mensaje)}`, '_blank');
+            };
+
+            database.ref('logs').orderByChild('id').equalTo(id).once('value', (s) => {
+                const list = document.getElementById('parentLogList'); list.innerHTML = "";
+                if(s.exists()){ s.forEach(c => { let l=c.val(); list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #eee;"><span>${l.hora}</span> - <b>${l.tipo}</b></div>` + list.innerHTML; }); }
+                else { list.innerHTML = "<p style='padding:10px;'>Sin registros.</p>"; }
+                document.getElementById('parentResult').style.display = 'block';
+            });
+        }
+
+        // --- FUNCIONES DE SOPORTE (Manteniendo lo anterior) ---
         function filtrarVistaReporte(tipo) {
             const fechaBuscada = document.getElementById('reportDate').value;
             if(!fechaBuscada) return alert("Seleccione una fecha");
@@ -219,10 +313,20 @@
                 const presentes = [...new Set(logsDelDia.filter(l => l.tipo === 'ENTRADA').map(l => l.id))];
                 Object.entries(db.personas).forEach(([id, p]) => {
                     if(!presentes.includes(id)) {
-                        cuerpo.insertAdjacentHTML('beforeend', `<tr><td><b>${id}</b></td><td>${p.nombre}</td><td>${p.puesto || '-'}</td><td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬 Avisar Estudiante</button></td></tr>`);
+                        cuerpo.insertAdjacentHTML('beforeend', `<tr><td><b>${id}</b></td><td>${p.nombre}</td><td>${p.puesto || '-'}</td><td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬 Avisar</button></td></tr>`);
                     }
                 });
             }
+        }
+
+        function renderAlumnos() {
+            const t = document.getElementById('tablaAlumnos'); t.innerHTML = "";
+            const hISO = new Date().toISOString().split('T')[0];
+            const pres = [...new Set(logsGlobal.filter(l => (l.fechaISO?l.fechaISO===hISO:coincideFecha(l.hora, hISO)) && l.tipo === 'ENTRADA').map(l => l.id))];
+            Object.entries(db.personas).forEach(([id, p]) => {
+                const isP = pres.includes(id);
+                t.insertAdjacentHTML('beforeend', `<tr><td><span class="status-badge ${isP?'status-in':'status-none'}">${isP?'LLEGÓ':'AUSENTE'}</span></td><td><b>${id}</b></td><td><input style="border:none;width:100%" value="${p.nombre}" onchange="db.personas['${id}'].nombre=this.value"></td><td><input style="border:none;width:100%;color:var(--cr-red);font-weight:bold;" value="${p.puesto||''}" onchange="db.personas['${id}'].puesto=this.value"></td><td><input style="border:none;width:100%" value="${p.telefono||''}" onchange="db.personas['${id}'].telefono=this.value"></td><td class="no-print"><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬</button> <button class="btn btn-i" onclick="descargarCarnet('${id}')">📇</button> <button class="btn btn-d" onclick="if(confirm('¿Borrar?')) database.ref('personas/'+'${id}').remove()">🗑️</button></td></tr>`);
+            });
         }
 
         function borrarHistorialDia() {
@@ -240,57 +344,7 @@
             doc.save(`Reporte_${document.getElementById('reportDate').value}.pdf`);
         }
 
-        function renderAlumnos() {
-            const t = document.getElementById('tablaAlumnos'); t.innerHTML = "";
-            const hISO = new Date().toISOString().split('T')[0];
-            const pres = [...new Set(logsGlobal.filter(l => (l.fechaISO?l.fechaISO===hISO:coincideFecha(l.hora, hISO)) && l.tipo === 'ENTRADA').map(l => l.id))];
-            Object.entries(db.personas).forEach(([id, p]) => {
-                const isP = pres.includes(id);
-                t.insertAdjacentHTML('beforeend', `<tr><td><span class="status-badge ${isP?'status-in':'status-none'}">${isP?'LLEGÓ':'AUSENTE'}</span></td><td><b>${id}</b></td><td><input style="border:none;width:100%" value="${p.nombre}" onchange="db.personas['${id}'].nombre=this.value"></td><td><input style="border:none;width:100%;color:var(--cr-red);font-weight:bold;" value="${p.puesto||''}" onchange="db.personas['${id}'].puesto=this.value"></td><td><input style="border:none;width:100%" value="${p.telefono||''}" onchange="db.personas['${id}'].telefono=this.value"></td><td class="no-print"><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬</button> <button class="btn btn-i" onclick="descargarCarnet('${id}')">📇</button> <button class="btn btn-d" onclick="if(confirm('¿Borrar?')) database.ref('personas/'+'${id}').remove()">🗑️</button></td></tr>`);
-            });
-        }
-
-        document.getElementById('lector').addEventListener('keydown', (e) => {
-            if(e.key === 'Enter') {
-                const id = e.target.value.trim();
-                if(db.personas[id]) {
-                    const hISO = new Date().toISOString().split('T')[0];
-                    const marcas = logsGlobal.filter(l => (l.fechaISO?l.fechaISO===hISO:coincideFecha(l.hora, hISO)) && l.id === id);
-                    const tieneE = marcas.some(l => l.tipo === 'ENTRADA'), tieneS = marcas.some(l => l.tipo === 'SALIDA');
-                    let tipo = "";
-                    if (!tieneE) tipo = "ENTRADA"; else if (!tieneS) tipo = "SALIDA"; else { alert("Ya registró Entrada y Salida hoy."); e.target.value = ''; return; }
-                    database.ref('logs').push({ id: id, nombre: db.personas[id].nombre, hora: new Date().toLocaleString(), fechaISO: hISO, tipo: tipo });
-                    const res = document.getElementById('resBox'); res.style.display = 'block'; res.style.background = tipo === "ENTRADA" ? "#d4edda" : "#f8d7da";
-                    document.getElementById('resNombre').innerText = db.personas[id].nombre; document.getElementById('resMov').innerText = "✅ " + tipo;
-                    setTimeout(() => res.style.display = 'none', 2000);
-                }
-                e.target.value = '';
-            }
-        });
-
-        // CONSULTA DE PADRES -> ENVÍA A LA JUNTA
-        function consultarPadre() {
-            const id = document.getElementById('parentInput').value.trim();
-            if(!db.personas[id]) return alert("Código no encontrado.");
-            const p = db.personas[id];
-            document.getElementById('parentStudentName').innerText = p.nombre;
-            document.getElementById('parentStudentPuesto').innerText = "Sección: " + (p.puesto || "N/A");
-            
-            // EL BOTÓN AHORA DIRIGE AL WHATSAPP OFICIAL DE LA JUNTA
-            document.getElementById('btnConsultaWA').onclick = () => { 
-                const mensaje = `Hola, quisiera consultar sobre el estado de asistencia de: ${p.nombre} (Cédula: ${id}).`;
-                window.open(`https://wa.me/506${NUMERO_OFICIAL_JUNTA}?text=${encodeURIComponent(mensaje)}`, '_blank');
-            };
-
-            database.ref('logs').orderByChild('id').equalTo(id).once('value', (s) => {
-                const list = document.getElementById('parentLogList'); list.innerHTML = "";
-                if(s.exists()){ s.forEach(c => { let l=c.val(); list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #eee;"><span>${l.hora}</span> - <b>${l.tipo}</b></div>` + list.innerHTML; }); }
-                else { list.innerHTML = "<p style='padding:10px;'>Sin registros.</p>"; }
-                document.getElementById('parentResult').style.display = 'block';
-            });
-        }
-
-        function mostrarVista(id) { document.getElementById('scan-view').style.display = (id==='scan-view')?'flex':'none'; document.getElementById('parent-view').style.display = (id==='parent-view')?'flex':'none'; }
+        function mostrarVista(id) { document.getElementById('scan-view').style.display = (id==='scan-view')?'flex':'none'; document.getElementById('parent-view').style.display = (id==='parent-view')?'flex':'none'; if(id!=='scan-view') pararCamara(); }
         function pedirClaveEscaner() { if(prompt("Clave:") === passEscaner) mostrarVista('scan-view'); }
         function pedirClaveMaster() { if(prompt("Clave:") === passMaster) document.getElementById('master-panel').style.display = 'block'; }
         function cerrarMaster() { document.getElementById('master-panel').style.display = 'none'; }
