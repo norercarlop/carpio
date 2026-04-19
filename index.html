@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>SISTEMA CARPIO V42 - GESTIÓN TOTAL</title>
+    <title>SISTEMA CARPIO V43 - GESTIÓN TOTAL</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -32,7 +32,7 @@
         
         .scanner-card { background: #ffffff; padding: 35px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; border-top: 8px solid var(--cr-blue); }
 
-        .input-scan { width: 100%; padding: 15px; font-size: 1.5rem; border: 2px solid #e0e0e0; border-radius: 12px; text-align: center; outline: none; margin-top: 15px; box-sizing: border-box; }
+        .input-scan { width: 100%; padding: 15px; font-size: 1.2rem; border: 2px solid #e0e0e0; border-radius: 12px; text-align: center; outline: none; margin-top: 15px; box-sizing: border-box; }
 
         #master-panel { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 1000; padding: 25px; box-sizing: border-box; overflow-y: auto; }
         
@@ -59,8 +59,6 @@
 
         .tab-btn { padding: 12px 28px; cursor: pointer; border: none; background: #e9ecef; border-radius: 8px; font-weight: bold; margin-right: 10px; }
         .tab-btn.active { background: var(--cr-blue); color: white; }
-
-        .badge { padding: 4px 8px; border-radius: 5px; font-size: 0.7rem; font-weight: bold; color: white; }
     </style>
 </head>
 <body id="main-body">
@@ -82,18 +80,25 @@
                 <h2 id="resNombre"></h2>
                 <h3 id="resMov"></h3>
             </div>
-            <button class="btn btn-d" style="margin-top:25px; width:100%" onclick="cerrarVistaProtegida('scan-view')">CERRAR</button>
+            <div style="display:flex; gap:10px; margin-top:25px;">
+                <button class="btn btn-dark" style="flex:1" onclick="cambiarPasswordEscaner()">🔑 CLAVE</button>
+                <button class="btn btn-d" style="flex:1" onclick="cerrarVistaProtegida('scan-view')">CERRAR</button>
+            </div>
         </div>
     </div>
 
     <div id="parent-view">
         <div class="scanner-card" style="border-top-color: var(--accent);">
             <h2 style="color: var(--accent);">Consulta para Padres</h2>
-            <input type="text" id="parentInput" class="input-scan" placeholder="Cédula">
-            <button class="btn btn-s" style="width:100%; margin-top:20px; padding:15px;" onclick="consultarPadre()">BUSCAR</button>
-            <div id="parentResult" style="margin-top:20px; display:none;">
-                <h3 id="parentStudentName"></h3>
-                <div id="parentLogList" style="border: 1px solid #eee; border-radius:10px; max-height:250px; overflow-y:auto;"></div>
+            <input type="text" id="parentInput" class="input-scan" placeholder="Código de miembro de la escuela">
+            <button class="btn btn-s" style="width:100%; margin-top:20px; padding:15px;" onclick="consultarPadre()">BUSCAR INFORMACIÓN</button>
+            <div id="parentResult" style="margin-top:20px; display:none; text-align:left;">
+                <div style="background:#f9f9f9; padding:15px; border-radius:12px; border:1px solid #eee; margin-bottom:15px;">
+                    <h3 id="parentStudentName" style="margin:0; color:var(--primary);"></h3>
+                    <p id="parentStudentPuesto" style="margin:5px 0; font-weight:bold; color:var(--cr-red);"></p>
+                    <button id="btnConsultaWA" class="btn btn-w" style="width:100%; margin-top:10px;">💬 CONSULTAR SOBRE MI ESTUDIANTE</button>
+                </div>
+                <div id="parentLogList" style="border: 1px solid #eee; border-radius:10px; max-height:200px; overflow-y:auto; background:white;"></div>
             </div>
         </div>
     </div>
@@ -102,8 +107,8 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h1 style="color:var(--primary); margin:0;">Gestión Administrativa</h1>
             <div style="display:flex; gap:10px;">
-                <button class="btn btn-i" onclick="cambiarFondo()">🖼️ FONDO</button>
-                <button class="btn btn-w" onclick="cambiarPasswordMaster()">🔑 CLAVES</button>
+                <button class="btn btn-i" onclick="cambiarFondo()">🖼️ EDITAR FONDO</button>
+                <button class="btn btn-w" onclick="cambiarPasswordMaster()">🔑 CLAVE MASTER</button>
                 <button class="btn btn-d" onclick="cerrarMaster()">❌ SALIR</button>
             </div>
         </div>
@@ -117,13 +122,13 @@
             <div class="power-bar no-print">
                 <button class="btn btn-i" onclick="agregarMiembroManual()">➕ AGREGAR</button>
                 <button class="btn btn-m" onclick="sincronizarConNube()">💾 GUARDAR EN NUBE</button>
-                <button class="btn btn-s" onclick="imprimirTodosLosCarnets()">📇 CARNÉS</button>
-                <button class="btn btn-dark" onclick="document.getElementById('csvFile').click()">📤 IMPORTAR</button>
+                <button class="btn btn-s" onclick="imprimirTodosLosCarnets()">📇 CARNÉS GRUPAL</button>
+                <button class="btn btn-dark" onclick="document.getElementById('csvFile').click()">📤 IMPORTAR CSV</button>
                 <input type="file" id="csvFile" accept=".csv" style="display:none;" onchange="importarCSV()">
                 <button class="btn btn-d" onclick="borrarTodo()">🧨 BORRAR TODO</button>
             </div>
-            <input type="text" id="busqueda" placeholder="Buscar..." onkeyup="filtrar()" style="width:100%; padding:12px; margin-bottom:15px; border-radius:8px; border:1px solid #ddd;">
-            <table>
+            <input type="text" id="busqueda" placeholder="🔍 Búsqueda rápida por nombre, cédula o sección..." onkeyup="filtrarRapido()" style="width:100%; padding:15px; margin-bottom:15px; border-radius:10px; border:2px solid var(--primary); font-size:1rem;">
+            <table id="mainTable">
                 <thead>
                     <tr>
                         <th>QR</th>
@@ -143,16 +148,14 @@
                 <button class="btn btn-s" onclick="filtrarVistaReporte('entradas')">✅ LLEGARON</button>
                 <button class="btn btn-m" onclick="filtrarVistaReporte('salidas')">🚪 SALIERON</button>
                 <button class="btn btn-d" onclick="filtrarVistaReporte('ausentes')">❌ NO LLEGARON</button>
-                <button class="btn btn-dark" onclick="exportarReportePDF()">📕 PDF</button>
+                <button class="btn btn-dark" onclick="exportarReportePDF()">📕 GENERAR PDF</button>
                 <button class="btn btn-w" onclick="if(confirm('¿Limpiar?')) database.ref('logs').remove()">🧹 LIMPIAR</button>
             </div>
-            <h2 id="tituloReporte" style="color:var(--dark);">Seleccione un filtro</h2>
-            <div id="contenedorReporte">
-                <table id="tabla-logs">
-                    <thead><tr id="headReporte"><th>Hora</th><th>Cédula</th><th>Nombre</th><th>Acción</th></tr></thead>
-                    <tbody id="cuerpoReporte"></tbody>
-                </table>
-            </div>
+            <h2 id="tituloReporte">Seleccione un filtro</h2>
+            <table id="tabla-logs">
+                <thead><tr id="headReporte"><th>Hora</th><th>Cédula</th><th>Nombre</th><th>Sección</th></tr></thead>
+                <tbody id="cuerpoReporte"></tbody>
+            </table>
         </div>
     </div>
 
@@ -168,9 +171,8 @@
 
         database.ref('personas').on('value', (s) => { db.personas = s.val() || {}; renderAlumnos(); });
         database.ref('logs').on('value', (s) => { 
-            logsHoy = [];
-            s.forEach(c => { logsHoy.push(c.val()); });
-            filtrarVistaReporte('entradas'); // Por defecto al cargar
+            logsHoy = []; s.forEach(c => logsHoy.push(c.val()));
+            if(document.getElementById('sec-reporte').style.display === 'block') filtrarVistaReporte('entradas');
         });
 
         function mostrarVista(id) {
@@ -178,53 +180,24 @@
             document.getElementById('parent-view').style.display = (id==='parent-view')?'flex':'none';
         }
 
-        function pedirClaveEscaner() { if(prompt("Clave:") === passEscaner) mostrarVista('scan-view'); }
-        function pedirClaveMaster() { if(prompt("Clave:") === passMaster) document.getElementById('master-panel').style.display = 'block'; }
+        function pedirClaveEscaner() { if(prompt("Clave de Acceso:") === passEscaner) mostrarVista('scan-view'); }
+        function pedirClaveMaster() { if(prompt("Clave Maestra:") === passMaster) document.getElementById('master-panel').style.display = 'block'; }
         function cerrarMaster() { document.getElementById('master-panel').style.display = 'none'; }
         function cerrarVistaProtegida(id) { document.getElementById(id).style.display = 'none'; mostrarVista('parent-view'); }
 
-        function cambiarPasswordMaster() { let n = prompt("Nueva Clave:"); if(n){ passMaster=n; localStorage.setItem('PASS_MASTER',n); } }
+        function cambiarPasswordEscaner() { let n = prompt("Nueva Clave Escáner:"); if(n){ passEscaner=n; localStorage.setItem('PASS_SCAN',n); alert("Clave actualizada."); } }
+        function cambiarPasswordMaster() { let n = prompt("Nueva Clave Master:"); if(n){ passMaster=n; localStorage.setItem('PASS_MASTER',n); alert("Clave actualizada."); } }
 
-        // LÓGICA DE REPORTES FILTRADOS
-        function filtrarVistaReporte(filtro) {
-            const cuerpo = document.getElementById('cuerpoReporte');
-            const head = document.getElementById('headReporte');
-            const titulo = document.getElementById('tituloReporte');
-            cuerpo.innerHTML = "";
-
-            // Obtener lista de IDs que tienen marca
-            let idsConEntrada = [...new Set(logsHoy.filter(l => l.tipo === 'ENTRADA').map(l => l.id))];
-            let idsConSalida = [...new Set(logsHoy.filter(l => l.tipo === 'SALIDA').map(l => l.id))];
-
-            if (filtro === 'entradas') {
-                titulo.innerHTML = "✅ Miembros que Ingresaron Hoy";
-                head.innerHTML = "<th>Hora</th><th>Cédula</th><th>Nombre</th><th>Sección</th>";
-                logsHoy.filter(l => l.tipo === 'ENTRADA').forEach(l => {
-                    const p = db.personas[l.id] || {};
-                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${l.hora.split(',')[1]}</td><td>${l.id}</td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
-                });
-            } 
-            else if (filtro === 'salidas') {
-                titulo.innerHTML = "🚪 Miembros que Salieron Hoy";
-                head.innerHTML = "<th>Hora</th><th>Cédula</th><th>Nombre</th><th>Sección</th>";
-                logsHoy.filter(l => l.tipo === 'SALIDA').forEach(l => {
-                    const p = db.personas[l.id] || {};
-                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${l.hora.split(',')[1]}</td><td>${l.id}</td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
-                });
-            } 
-            else if (filtro === 'ausentes') {
-                titulo.innerHTML = "❌ Miembros Ausentes (Sin Marcas)";
-                head.innerHTML = "<th>Cédula</th><th>Nombre</th><th>Sección</th><th>Contactar</th>";
-                Object.entries(db.personas).forEach(([id, p]) => {
-                    if (!idsConEntrada.includes(id)) {
-                        cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${id}</td><td>${p.nombre}</td><td>${p.puesto || '-'}</td>
-                        <td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬 WhatsApp</button></td></tr>`);
-                    }
-                });
+        // BÚSQUEDA RÁPIDA OPTIMIZADA
+        function filtrarRapido() {
+            let filter = document.getElementById('busqueda').value.toUpperCase();
+            let rows = document.getElementById("tablaAlumnos").getElementsByTagName("tr");
+            for (let i = 0; i < rows.length; i++) {
+                let text = rows[i].textContent || rows[i].innerText;
+                rows[i].style.display = text.toUpperCase().indexOf(filter) > -1 ? "" : "none";
             }
         }
 
-        // TABLA ADMINISTRACIÓN
         function renderAlumnos() {
             const t = document.getElementById('tablaAlumnos'); t.innerHTML = "";
             Object.entries(db.personas).forEach(([id, p]) => {
@@ -234,9 +207,10 @@
                     <td><b>${id}</b></td>
                     <td><input style="border:none;width:100%" value="${p.nombre}" onchange="db.personas['${id}'].nombre=this.value"></td>
                     <td><input style="border:none;width:100%" value="${p.telefono||''}" onchange="db.personas['${id}'].telefono=this.value"></td>
-                    <td><input style="border:none;width:100%;color:var(--primary);font-weight:bold;" placeholder="Sección..." value="${p.puesto||''}" onchange="db.personas['${id}'].puesto=this.value"></td>
+                    <td><input style="border:none;width:100%;color:var(--cr-red);font-weight:bold;" value="${p.puesto||''}" onchange="db.personas['${id}'].puesto=this.value"></td>
                     <td class="no-print">
                         <div style="display:flex;gap:5px;">
+                            <button class="btn btn-s" style="padding:5px 10px" onclick="enviarWA('${p.telefono}')">💬</button>
                             <button class="btn btn-i" style="padding:5px 10px" onclick="descargarCarnet('${id}')">📇</button>
                             <button class="btn btn-d" style="padding:5px 10px" onclick="if(confirm('¿Borrar?')) database.ref('personas/'+'${id}').remove()">🗑️</button>
                         </div>
@@ -246,15 +220,67 @@
             });
         }
 
-        // ESCÁNER
+        function consultarPadre() {
+            const id = document.getElementById('parentInput').value.trim();
+            if(!db.personas[id]) return alert("El código ingresado no existe en los registros.");
+            const p = db.personas[id];
+            document.getElementById('parentStudentName').innerText = p.nombre;
+            document.getElementById('parentStudentPuesto').innerText = "Sección: " + (p.puesto || "N/A");
+            
+            // Acción del botón de WhatsApp para padres
+            document.getElementById('btnConsultaWA').onclick = () => {
+                window.open(`https://wa.me/50688888888?text=${encodeURIComponent('Hola, quisiera realizar una consulta sobre mi estudiante: ' + p.nombre + ' del código ' + id)}`, '_blank');
+            };
+
+            database.ref('logs').orderByChild('id').equalTo(id).once('value', (s) => {
+                const list = document.getElementById('parentLogList'); list.innerHTML = "";
+                if(s.exists()){ s.forEach(c => { let l=c.val(); list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #eee;"><span>${l.hora}</span> - <b>${l.tipo}</b></div>` + list.innerHTML; }); }
+                else { list.innerHTML = "<p style='padding:10px;'>Sin movimientos registrados hoy.</p>"; }
+                document.getElementById('parentResult').style.display = 'block';
+            });
+        }
+
+        // LÓGICA DE REPORTES FILTRADOS
+        function filtrarVistaReporte(filtro) {
+            const cuerpo = document.getElementById('cuerpoReporte');
+            const head = document.getElementById('headReporte');
+            const titulo = document.getElementById('tituloReporte');
+            cuerpo.innerHTML = "";
+            let idsConEntrada = [...new Set(logsHoy.filter(l => l.tipo === 'ENTRADA').map(l => l.id))];
+
+            if (filtro === 'entradas') {
+                titulo.innerHTML = "✅ Miembros que Ingresaron Hoy";
+                head.innerHTML = "<th>Hora</th><th>Cédula</th><th>Nombre</th><th>Sección</th>";
+                logsHoy.filter(l => l.tipo === 'ENTRADA').forEach(l => {
+                    const p = db.personas[l.id] || {};
+                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${l.hora.split(',')[1]}</td><td>${l.id}</td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
+                });
+            } else if (filtro === 'salidas') {
+                titulo.innerHTML = "🚪 Miembros que Salieron Hoy";
+                head.innerHTML = "<th>Hora</th><th>Cédula</th><th>Nombre</th><th>Sección</th>";
+                logsHoy.filter(l => l.tipo === 'SALIDA').forEach(l => {
+                    const p = db.personas[l.id] || {};
+                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${l.hora.split(',')[1]}</td><td>${l.id}</td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
+                });
+            } else if (filtro === 'ausentes') {
+                titulo.innerHTML = "❌ Miembros Ausentes";
+                head.innerHTML = "<th>Cédula</th><th>Nombre</th><th>Sección</th><th>WhatsApp</th>";
+                Object.entries(db.personas).forEach(([id, p]) => {
+                    if (!idsConEntrada.includes(id)) {
+                        cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${id}</td><td>${p.nombre}</td><td>${p.puesto || '-'}</td>
+                        <td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬 Enviar</button></td></tr>`);
+                    }
+                });
+            }
+        }
+
+        // ESCÁNER KEYDOWN
         document.getElementById('lector').addEventListener('keydown', (e) => {
             if(e.key === 'Enter') {
                 const id = e.target.value.trim();
                 if(db.personas[id]) {
-                    // Lógica para saber si es entrada o salida (si ya tiene una entrada hoy, marcar salida)
                     let marcasDeHoy = logsHoy.filter(l => l.id === id);
                     let tipo = marcasDeHoy.length % 2 === 0 ? "ENTRADA" : "SALIDA";
-                    
                     database.ref('logs').push({ id: id, nombre: db.personas[id].nombre, hora: new Date().toLocaleString(), tipo: tipo });
                     const res = document.getElementById('resBox'); res.style.display = 'block';
                     res.style.background = tipo === "ENTRADA" ? "#d4edda" : "#f8d7da";
@@ -266,13 +292,13 @@
             }
         });
 
-        // FUNCIONES GENERALES
-        function sincronizarConNube() { database.ref('personas').set(db.personas); alert("Sincronizado!"); }
-        function enviarWA(tel) { if(!tel) return; window.open(`https://wa.me/506${tel.replace(/\D/g,'')}`, '_blank'); }
-        function exportarReportePDF() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text(document.getElementById('tituloReporte').innerText, 14, 15); doc.autoTable({ html: '#tabla-logs', marginTop: 20 }); doc.save("Reporte.pdf"); }
+        function sincronizarConNube() { database.ref('personas').set(db.personas); alert("Datos guardados en la nube."); }
+        function enviarWA(tel) { if(!tel) return alert("No hay teléfono registrado."); window.open(`https://wa.me/506${tel.replace(/\D/g,'')}`, '_blank'); }
+        function exportarReportePDF() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text(document.getElementById('tituloReporte').innerText, 14, 15); doc.autoTable({ html: '#tabla-logs', marginTop: 20 }); doc.save("Reporte_Asistencia.pdf"); }
         function cambiarTab(n) { document.getElementById('sec-alumnos').style.display = (n===1)?'block':'none'; document.getElementById('sec-reporte').style.display = (n===2)?'block':'none'; document.getElementById('tab1').className = (n===1)?'tab-btn active':'tab-btn'; document.getElementById('tab2').className = (n===2)?'tab-btn active':'tab-btn'; }
-        function filtrar() { let q = document.getElementById('busqueda').value.toLowerCase(); document.querySelectorAll("#tablaAlumnos tr").forEach(tr => tr.style.display = tr.innerText.toLowerCase().includes(q) ? "" : "none"); }
-        function agregarMiembroManual() { const id=prompt("Cédula:"); if(id) { db.personas[id]={nombre:prompt("Nombre:"), puesto:prompt("Sección:"), telefono:prompt("WhatsApp:")}; renderAlumnos(); } }
+        function agregarMiembroManual() { const id=prompt("Cédula/Código:"); if(id) { db.personas[id]={nombre:prompt("Nombre:"), puesto:prompt("Sección:"), telefono:prompt("WhatsApp:")}; renderAlumnos(); } }
+        function cambiarFondo() { let url = prompt("Pegue Link de Imagen:"); if(url){ localStorage.setItem('CUSTOM_BG', url); location.reload(); } }
+        function borrarTodo() { if(confirm("¿Borrar todo?")) { database.ref().remove(); location.reload(); } }
         
         function descargarCarnet(id) {
             const p = db.personas[id];
@@ -289,7 +315,7 @@
             </style></head>
             <body>
                 <div class="card">
-                    <div class="header"><h2>ESCUELA LA CARPIO</h2><small>CARNÉ OFICIAL</small></div>
+                    <div class="header"><h2>ESCUELA LA CARPIO</h2><small>IDENTIFICACIÓN</small></div>
                     <div style="text-align:center;"><div class="qr-container"><div id="q"></div></div></div>
                     <div class="info">
                         <div class="id-label">${id}</div>
@@ -318,17 +344,14 @@
             win.document.close();
         }
 
-        function borrarTodo() { if(confirm("¿Borrar todo?")) { database.ref().remove(); location.reload(); } }
-        function consultarPadre() {
-            const id = document.getElementById('parentInput').value.trim();
-            if(!db.personas[id]) return alert("ID no encontrado");
-            document.getElementById('parentStudentName').innerText = db.personas[id].nombre;
-            database.ref('logs').orderByChild('id').equalTo(id).once('value', (s) => {
-                const list = document.getElementById('parentLogList'); list.innerHTML = "";
-                if(s.exists()){ s.forEach(c => { let l=c.val(); list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #eee;"><span>${l.hora}</span> - <b>${l.tipo}</b></div>` + list.innerHTML; }); }
-                else { list.innerHTML = "<p style='padding:10px;'>Sin marcas hoy.</p>"; }
-                document.getElementById('parentResult').style.display = 'block';
-            });
+        function importarCSV() { 
+            const f = document.getElementById('csvFile').files[0]; 
+            const r = new FileReader(); 
+            r.onload = (e) => { 
+                e.target.result.split('\n').forEach((l, i) => { if(i>0 && l.trim()){ let c=l.split(','); db.personas[c[0].trim()]={nombre:c[1]?.trim(), puesto:c[2]?.trim(), telefono:c[3]?.trim()}; } }); 
+                renderAlumnos(); alert("Cargado. Dele a GUARDAR EN NUBE.");
+            }; 
+            r.readAsText(f); 
         }
     </script>
 </body>
