@@ -20,12 +20,16 @@
         body { 
             font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden;
             background-color: #f8f9fa;
+            background-image: linear-gradient(rgba(255,255,255,0.94), rgba(255,255,255,0.94)),
+                repeating-linear-gradient(45deg, var(--cr-blue) 0, var(--cr-blue) 2px, transparent 0, transparent 50%),
+                repeating-linear-gradient(-45deg, var(--cr-red) 0, var(--cr-red) 2px, transparent 0, transparent 50%);
+            background-size: cover, 80px 80px, 80px 80px;
         }
 
         .navbar { background: var(--dark); color: white; padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid var(--cr-red); }
-        #scan-view, #parent-view { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
+        #scan-view, #parent-view { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         
-        .scanner-card { background: #ffffff; padding: 30px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; border-top: 8px solid var(--cr-blue); }
+        .scanner-card { background: #ffffff; padding: 35px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; border-top: 8px solid var(--cr-blue); }
         .input-scan { width: 100%; padding: 15px; font-size: 1.2rem; border: 2px solid #e0e0e0; border-radius: 12px; text-align: center; outline: none; margin-top: 15px; box-sizing: border-box; }
 
         #master-panel { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 1000; padding: 25px; box-sizing: border-box; overflow-y: auto; }
@@ -47,6 +51,10 @@
         .tab-btn { padding: 12px 28px; cursor: pointer; border: none; background: #e9ecef; border-radius: 8px; font-weight: bold; margin-right: 10px; }
         .tab-btn.active { background: var(--cr-blue); color: white; }
 
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
+        .status-in { background: #d4edda; color: #155724; }
+        .status-none { background: #f8d7da; color: #721c24; }
+
         #reader { width: 100%; border-radius: 15px; overflow: hidden; margin-top: 15px; display: none; border: 2px solid var(--cr-blue); }
     </style>
 </head>
@@ -67,7 +75,7 @@
             <input type="text" id="lector" class="input-scan" placeholder="Escanee carné..." autofocus>
             
             <div id="reader"></div>
-            <button id="btnCamara" class="btn btn-i" style="width:100%; margin-top:15px;" onclick="toggleCamara()">📱 ACTIVAR CÁMARA QR</button>
+            <button id="btnCamara" class="btn btn-i" style="width:100%; margin-top:15px;" onclick="toggleCamara()">📱 USAR CÁMARA DEL CELULAR</button>
 
             <div id="resBox" style="margin-top:20px; display:none; padding:20px; border-radius:15px; border: 2px solid #ddd;">
                 <h2 id="resNombre"></h2>
@@ -115,7 +123,7 @@
             <div class="power-bar no-print">
                 <div style="display:flex; gap:10px;">
                     <button class="btn btn-i" onclick="agregarMiembroManual()">➕ AGREGAR</button>
-                    <button class="btn btn-m" onclick="sincronizarConNube()">💾 GUARDAR</button>
+                    <button class="btn btn-m" onclick="sincronizarConNube()">💾 GUARDAR EN NUBE</button>
                     <button class="btn btn-s" onclick="imprimirTodosLosCarnets()">📇 CARNÉS GRUPAL</button>
                 </div>
                 <button class="btn btn-d" onclick="borrarTodo()">🧨 BORRAR TODO</button>
@@ -123,7 +131,7 @@
             <input type="text" id="busqueda" placeholder="🔍 Buscar..." onkeyup="filtrarRapido()" style="width:100%; padding:15px; margin-bottom:15px; border-radius:10px; border:2px solid var(--primary);">
             <table>
                 <thead>
-                    <tr><th>Estado</th><th>Código</th><th>Nombre</th><th>Sección</th><th>WhatsApp</th><th class="no-print">Acciones</th></tr>
+                    <tr><th>Estado Hoy</th><th>Código</th><th>Nombre</th><th>Sección</th><th>WhatsApp</th><th class="no-print">Acciones</th></tr>
                 </thead>
                 <tbody id="tablaAlumnos"></tbody>
             </table>
@@ -132,8 +140,8 @@
         <div id="sec-reporte" style="display:none;">
             <div class="power-bar no-print">
                 <input type="date" id="reportDate" style="padding:10px; border-radius:8px;">
-                <button class="btn btn-s" onclick="filtrarVistaReporte('ENTRADA')">✅ LLEGÓ</button>
-                <button class="btn btn-d" onclick="filtrarVistaReporte('AUSENTES')">❌ AUSENTE</button>
+                <button class="btn btn-s" onclick="filtrarVistaReporte('ENTRADA')">✅ LLEGARON</button>
+                <button class="btn btn-d" onclick="filtrarVistaReporte('AUSENTES')">❌ NO LLEGARON</button>
                 <button class="btn btn-w" onclick="exportarPDFReporte()">📕 PDF</button>
             </div>
             <table id="tabla-logs-final">
@@ -144,17 +152,18 @@
     </div>
 
     <script>
-        let NUMERO_OFICIAL_JUNTA = "88888888"; 
+        let NUMERO_OFICIAL_JUNTA = "88888888";
         const firebaseConfig = { databaseURL: "https://escuela-la-carpio-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
         let db = { personas: {} };
         let logsGlobal = [];
-        let html5QrCode; 
+        let html5QrCode;
         let passMaster = localStorage.getItem('PASS_MASTER') || "CARPIO2026";
         let passEscaner = localStorage.getItem('PASS_SCAN') || "1234";
 
+        document.getElementById('reportDate').valueAsDate = new Date();
         database.ref('config/numeroOficial').on('value', (s) => { if(s.val()) NUMERO_OFICIAL_JUNTA = s.val(); });
         database.ref('personas').on('value', (s) => { db.personas = s.val() || {}; renderAlumnos(); });
         database.ref('logs').on('value', (s) => { 
@@ -162,94 +171,75 @@
             renderAlumnos(); 
         });
 
-        // --- LÓGICA DE ESCANEO ---
+        // --- PROCESAR ESCANEO ---
         function procesarEscaneo(id) {
             id = id.trim();
-            if(!db.personas[id]) return alert("Código no registrado: " + id);
-            const hISO = new Date().toISOString().split('T')[0];
-            const marcas = logsGlobal.filter(l => (l.fechaISO === hISO) && l.id === id);
-            let tipo = marcas.some(l => l.tipo === 'ENTRADA') ? (marcas.some(l => l.tipo === 'SALIDA') ? null : "SALIDA") : "ENTRADA";
-            
-            if(!tipo) return alert("Ya registró entrada y salida hoy.");
-            
-            database.ref('logs').push({ id: id, nombre: db.personas[id].nombre, hora: new Date().toLocaleString(), fechaISO: hISO, tipo: tipo });
-            const res = document.getElementById('resBox'); res.style.display = 'block'; res.style.background = tipo === "ENTRADA" ? "#d4edda" : "#f8d7da";
-            document.getElementById('resNombre').innerText = db.personas[id].nombre; document.getElementById('resMov').innerText = "✅ " + tipo;
-            setTimeout(() => res.style.display = 'none', 3000);
+            if(db.personas[id]) {
+                const hISO = new Date().toISOString().split('T')[0];
+                const marcas = logsGlobal.filter(l => (l.fechaISO === hISO) && l.id === id);
+                let tipo = marcas.some(l => l.tipo === 'ENTRADA') ? (marcas.some(l => l.tipo === 'SALIDA') ? null : "SALIDA") : "ENTRADA";
+                if(!tipo) { alert("Ya registró hoy."); return; }
+                database.ref('logs').push({ id: id, nombre: db.personas[id].nombre, hora: new Date().toLocaleString(), fechaISO: hISO, tipo: tipo });
+                const res = document.getElementById('resBox'); res.style.display = 'block'; res.style.background = tipo === "ENTRADA" ? "#d4edda" : "#f8d7da";
+                document.getElementById('resNombre').innerText = db.personas[id].nombre; document.getElementById('resMov').innerText = "✅ " + tipo;
+                setTimeout(() => res.style.display = 'none', 2000);
+            }
         }
 
-        document.getElementById('lector').addEventListener('keydown', (e) => {
-            if(e.key === 'Enter') { procesarEscaneo(e.target.value); e.target.value = ''; }
-        });
+        document.getElementById('lector').addEventListener('keydown', (e) => { if(e.key === 'Enter') { procesarEscaneo(e.target.value); e.target.value = ''; } });
 
         function toggleCamara() {
             const readerDiv = document.getElementById('reader');
             if (readerDiv.style.display === 'none') {
                 readerDiv.style.display = 'block';
                 html5QrCode = new Html5Qrcode("reader");
-                html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 },
-                    (text) => { procesarEscaneo(text); pararCamara(); }
-                ).catch(err => alert("Error: " + err));
+                html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (text) => { procesarEscaneo(text); pararCamara(); })
+                .catch(err => alert("Error de cámara."));
                 document.getElementById('btnCamara').innerText = "❌ CERRAR CÁMARA";
             } else { pararCamara(); }
         }
 
-        function pararCamara() {
-            if(html5QrCode) html5QrCode.stop().then(() => {
-                document.getElementById('reader').style.display = 'none';
-                document.getElementById('btnCamara').innerText = "📱 ACTIVAR CÁMARA QR";
-            });
-        }
+        function pararCamara() { if(html5QrCode) html5QrCode.stop().then(() => { document.getElementById('reader').style.display = 'none'; document.getElementById('btnCamara').innerText = "📱 USAR CÁMARA DEL CELULAR"; }); }
 
-        // --- DISEÑO DE CARNÉ (ESTILO IMAGEN ADJUNTA) ---
+        // --- CARNÉ ACTUALIZADO ---
         function descargarCarnet(id) {
             const p = db.personas[id];
-            const win = window.open('','','width=400,height=600');
+            const win = window.open('','','width=350,height=500');
             win.document.write(`
             <html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
             <style>
-                body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #eee; }
+                body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; }
                 .card { 
-                    width: 320px; height: 480px; background: white; border-radius: 20px; overflow: hidden; 
-                    box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative; font-family: 'Arial', sans-serif;
-                    background-image: 
-                        linear-gradient(to bottom, #002b7f 15%, transparent 15%, transparent 25%, #ce1126 25%, #ce1126 35%, transparent 35%, transparent 65%, #ce1126 65%, #ce1126 75%, transparent 75%, transparent 85%, #002b7f 85%);
+                    width: 300px; height: 450px; background: white; border-radius: 15px; overflow: hidden; position: relative; text-align: center; border: 1px solid #ddd;
+                    background-image: linear-gradient(to bottom, #002b7f 12%, transparent 12%, transparent 22%, #ce1126 22%, #ce1126 32%, transparent 32%, transparent 68%, #ce1126 68%, #ce1126 78%, transparent 78%, transparent 88%, #002b7f 88%);
                 }
-                .escudo { width: 100px; margin-top: 15px; }
-                .blue-bar { background: #002b7f; color: white; padding: 10px; margin-top: 110px; font-size: 1.5rem; font-weight: bold; text-transform: uppercase; border-top: 3px solid white; border-bottom: 3px solid white; }
-                .id-text { color: #f1c40f; font-weight: bold; font-size: 1.2rem; margin-top: 5px; }
+                .escudo { width: 85px; margin-top: 15px; }
+                .blue-bar { background: #002b7f; color: white; padding: 8px; margin-top: 105px; font-size: 1.3rem; font-weight: bold; border-top: 2px solid white; border-bottom: 2px solid white; }
+                .id-text { color: #f1c40f; font-weight: bold; font-size: 1.1rem; margin-top: 5px; }
                 .qr-zone { background: white; padding: 10px; display: inline-block; margin-top: 15px; border-radius: 5px; }
-                .header-text { position: absolute; top: 10px; width: 100%; color: white; font-size: 0.6rem; font-weight: bold; line-height: 1.2; }
             </style>
             </head><body>
-            <div class="card" id="print-area">
-                <div class="header-text">ESCUELA DE<br>ATENCION PRIORITARIA<br>LA CARPIO</div>
-                <center>
-                    <img class="escudo" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRzN-w0X7y9M3v55_p9Y0S9f96-N5696Y3v5Q&s">
-                    <div class="blue-bar">${p.nombre}</div>
-                    <div class="id-text">${id}</div>
-                    <div class="qr-zone"><div id="q"></div></div>
-                </center>
+            <div class="card">
+                <img class="escudo" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRzN-w0X7y9M3v55_p9Y0S9f96-N5696Y3v5Q&s">
+                <div class="blue-bar">${p.nombre}</div>
+                <div class="id-text">${id}</div>
+                <div class="qr-zone"><div id="q"></div></div>
             </div>
-            <script>
-                new QRCode(document.getElementById("q"), { text: "${id}", width: 130, height: 130 });
-                setTimeout(() => { window.print(); window.close(); }, 800);
-            <\/script></body></html>`);
+            <script>new QRCode(document.getElementById("q"), { text: "${id}", width: 120, height: 120 }); setTimeout(() => { window.print(); window.close(); }, 800);<\/script>
+            </body></html>`);
             win.document.close();
         }
 
-        // --- FUNCIONES RESTANTES (Mantenidas) ---
+        // --- LÓGICA ORIGINAL RESTANTE ---
         function consultarPadre() {
             const id = document.getElementById('parentInput').value.trim();
             if(!db.personas[id]) return alert("No existe.");
             const p = db.personas[id];
             document.getElementById('parentStudentName').innerText = p.nombre;
             document.getElementById('parentStudentPuesto').innerText = "Sección: " + (p.puesto || "-");
-            document.getElementById('btnConsultaWA').onclick = () => {
-                window.open(`https://wa.me/506${NUMERO_OFICIAL_JUNTA}?text=Consulta: ${p.nombre} (${id})`, '_blank');
-            };
+            document.getElementById('btnConsultaWA').onclick = () => window.open(`https://wa.me/506${NUMERO_OFICIAL_JUNTA}?text=Consulta: ${p.nombre} (${id})`, '_blank');
             database.ref('logs').orderByChild('id').equalTo(id).once('value', s => {
-                let h = ""; s.forEach(c => { let l=c.val(); h = `<div style="padding:8px;border-bottom:1px solid #eee;">${l.hora} - <b>${l.tipo}</b></div>` + h; });
+                let h = ""; s.forEach(c => { let l=c.val(); h = `<div style="padding:10px; border-bottom:1px solid #eee;">${l.hora} - <b>${l.tipo}</b></div>` + h; });
                 document.getElementById('parentLogList').innerHTML = h || "Sin registros.";
                 document.getElementById('parentResult').style.display = 'block';
             });
@@ -261,7 +251,7 @@
             const pres = [...new Set(logsGlobal.filter(l => l.fechaISO === hISO && l.tipo === 'ENTRADA').map(l => l.id))];
             Object.entries(db.personas).forEach(([id, p]) => {
                 const isP = pres.includes(id);
-                t.insertAdjacentHTML('beforeend', `<tr><td>${isP?'✅':'❌'}</td><td><b>${id}</b></td><td>${p.nombre}</td><td>${p.puesto||''}</td><td>${p.telefono||''}</td><td class="no-print"><button class="btn btn-i" onclick="descargarCarnet('${id}')">📇</button> <button class="btn btn-d" onclick="database.ref('personas/${id}').remove()">🗑️</button></td></tr>`);
+                t.insertAdjacentHTML('beforeend', `<tr><td><span class="status-badge ${isP?'status-in':'status-none'}">${isP?'LLEGÓ':'AUSENTE'}</span></td><td><b>${id}</b></td><td>${p.nombre}</td><td>${p.puesto||''}</td><td>${p.telefono||''}</td><td><button class="btn btn-i" onclick="descargarCarnet('${id}')">📇</button> <button class="btn btn-d" onclick="database.ref('personas/${id}').remove()">🗑️</button></td></tr>`);
             });
         }
 
@@ -271,10 +261,10 @@
         function cerrarMaster() { document.getElementById('master-panel').style.display = 'none'; }
         function cerrarVistaProtegida(id) { document.getElementById(id).style.display = 'none'; mostrarVista('parent-view'); }
         function filtrarRapido() { let f = document.getElementById('busqueda').value.toUpperCase(); let rows = document.getElementById("tablaAlumnos").getElementsByTagName("tr"); for (let i = 0; i < rows.length; i++) { rows[i].style.display = (rows[i].textContent.toUpperCase().indexOf(f) > -1) ? "" : "none"; } }
-        function editarNumeroJunta() { let n = prompt("WhatsApp Junta:", NUMERO_OFICIAL_JUNTA); if(n) database.ref('config/numeroOficial').set(n); }
+        function editarNumeroJunta() { let n = prompt("WhatsApp Oficial:", NUMERO_OFICIAL_JUNTA); if(n) database.ref('config/numeroOficial').set(n); }
         function agregarMiembroManual() { const id=prompt("Cédula:"); if(id) { db.personas[id]={nombre:prompt("Nombre:"), puesto:prompt("Sección:"), telefono:prompt("WA:")}; database.ref('personas/'+id).set(db.personas[id]); } }
         function sincronizarConNube() { database.ref('personas').set(db.personas); alert("Guardado."); }
-        function cambiarTab(n) { document.getElementById('sec-alumnos').style.display=(n===1)?'block':'none'; document.getElementById('sec-reporte').style.display=(n===2)?'block':'none'; }
+        function cambiarTab(n) { document.getElementById('sec-alumnos').style.display=(n===1)?'block':'none'; document.getElementById('sec-reporte').style.display=(n===2)?'block':'none'; document.getElementById('tab1').className=(n===1)?'tab-btn active':'tab-btn'; document.getElementById('tab2').className=(n===2)?'tab-btn active':'tab-btn'; }
         function borrarTodo() { if(confirm("¿Seguro?")) { database.ref('personas').remove(); database.ref('logs').remove(); } }
     </script>
 </body>
