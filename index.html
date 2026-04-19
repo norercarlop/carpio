@@ -25,7 +25,7 @@
             background-size: cover, 80px 80px, 80px 80px;
         }
 
-        .navbar { background: var(--dark); color: white; padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid var(--cr-red); }
+        .navbar { background: var(--dark); color: white; padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid var(--cr-red); box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
         #scan-view, #parent-view { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         
         .scanner-card { background: #ffffff; padding: 35px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; border-top: 8px solid var(--cr-blue); }
@@ -34,6 +34,7 @@
         #master-panel { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 1000; padding: 25px; box-sizing: border-box; overflow-y: auto; }
         
         .btn { padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white !important; display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; transition: 0.2s; }
+        .btn:active { transform: scale(0.95); }
         .btn-m { background-color: var(--primary) !important; } 
         .btn-s { background-color: var(--accent) !important; } 
         .btn-d { background-color: var(--danger) !important; } 
@@ -43,16 +44,16 @@
 
         .power-bar { background: #f1f4f8; padding: 15px; border-radius: 15px; display: flex; gap: 10px; align-items: center; margin-bottom: 20px; border: 1px solid #ddd; flex-wrap: wrap; }
         
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; border-radius: 10px; overflow: hidden; }
-        th { background: #e9ecef; padding: 15px; text-align: left; font-size: 0.85rem; color: var(--dark); }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        th { background: #e9ecef; padding: 15px; text-align: left; font-size: 0.85rem; color: var(--dark); border-bottom: 2px solid #dee2e6; }
         td { border-bottom: 1px solid #eee; padding: 12px 15px; }
 
         .tab-btn { padding: 12px 28px; cursor: pointer; border: none; background: #e9ecef; border-radius: 8px; font-weight: bold; margin-right: 10px; }
         .tab-btn.active { background: var(--cr-blue); color: white; }
 
-        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
-        .status-in { background: #d4edda; color: #155724; }
-        .status-none { background: #f8d7da; color: #721c24; }
+        .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
+        .status-in { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status-none { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
     </style>
 </head>
 <body>
@@ -140,19 +141,22 @@
         <div id="sec-reporte" style="display:none;">
             <div class="power-bar no-print" style="justify-content: space-between;">
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <label><b>Fecha:</b></label>
+                    <label><b>Filtrar Fecha:</b></label>
                     <input type="date" id="reportDate" style="padding:10px; border-radius:8px; border:1px solid #ccc;">
-                    <button class="btn btn-dark" onclick="cargarReportePorFecha()">🔍 CARGAR DATOS</button>
+                    <button class="btn btn-dark" onclick="cargarReportePorFecha()">🔍 CARGAR</button>
                 </div>
                 <div style="display:flex; gap:5px;">
-                    <button class="btn btn-s" onclick="filtrarVistaReporte('entradas')">✅ LLEGARON</button>
-                    <button class="btn btn-m" onclick="filtrarVistaReporte('salidas')">🚪 SALIERON</button>
-                    <button class="btn btn-d" onclick="filtrarVistaReporte('ausentes')">❌ NO LLEGARON</button>
+                    <button class="btn btn-s" onclick="filtrarVistaReporte('ENTRADA')">✅ LLEGARON</button>
+                    <button class="btn btn-m" onclick="filtrarVistaReporte('SALIDA')">🚪 SALIERON</button>
+                    <button class="btn btn-d" onclick="filtrarVistaReporte('AUSENTES')">❌ NO LLEGARON</button>
                 </div>
             </div>
-            <h2 id="tituloReporte">Cargue una fecha para ver el reporte</h2>
+            
+            <h2 id="tituloReporte" style="color:var(--primary);">Seleccione una fecha y presione CARGAR</h2>
+            
             <table id="tabla-logs">
-                <thead><tr id="headReporte"><th>Hora</th><th>Código</th><th>Nombre</th><th>Sección</th></tr></thead>
+                <thead id="headReporte">
+                    </thead>
                 <tbody id="cuerpoReporte"></tbody>
             </table>
         </div>
@@ -165,88 +169,106 @@
 
         let db = { personas: {} };
         let logsGlobal = [];
-        let logsFiltradosDeFecha = [];
+        let logsSeleccionados = []; // Los logs del día que se eligió
         let passMaster = localStorage.getItem('PASS_MASTER') || "CARPIO2026";
         let passEscaner = localStorage.getItem('PASS_SCAN') || "1234";
 
         document.getElementById('reportDate').valueAsDate = new Date();
 
-        // --- UTILIDAD DE FECHA PARA COMPARACIÓN PRECISA ---
-        function normalizarFecha(str) {
-            if(!str) return "";
-            const fechaParte = str.split(',')[0].trim();
-            const partes = fechaParte.split('/');
-            if(partes.length !== 3) return str;
-            // Convierte D/M/YYYY a YYYY-MM-DD para comparar con el input date
-            return `${partes[2]}-${partes[1].padStart(2,'0')}-${partes[0].padStart(2,'0')}`;
+        // --- NORMALIZADOR DE FECHAS (CRUCIAL) ---
+        function getFechaISO(fechaStr) {
+            // Convierte "19/4/2026, 10:00:00" -> "2026-04-19"
+            const parteFecha = fechaStr.split(',')[0].trim();
+            const [d, m, y] = parteFecha.split('/');
+            return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
         }
 
         database.ref('personas').on('value', (s) => { db.personas = s.val() || {}; renderAlumnos(); });
         database.ref('logs').on('value', (s) => { 
-            logsGlobal = []; s.forEach(c => logsGlobal.push(c.val()));
+            logsGlobal = []; 
+            s.forEach(c => logsGlobal.push(c.val()));
             renderAlumnos(); 
         });
 
-        // --- CARGAR TODOS LOS MIEMBROS DEL DÍA ---
+        // --- LÓGICA DE REPORTES MEJORADA ---
         function cargarReportePorFecha() {
-            const targetISO = document.getElementById('reportDate').value; // YYYY-MM-DD
-            if(!targetISO) return;
+            const fechaBusqueda = document.getElementById('reportDate').value; // YYYY-MM-DD
+            if(!fechaBusqueda) return alert("Seleccione una fecha primero");
+
+            // Filtramos TODOS los logs que coincidan con esa fecha
+            logsSeleccionados = logsGlobal.filter(log => getFechaISO(log.hora) === fechaBusqueda);
             
-            // Filtra todos los registros que coincidan con la fecha normalizada
-            logsFiltradosDeFecha = logsGlobal.filter(l => normalizarFecha(l.hora) === targetISO);
+            if(logsSeleccionados.length === 0) {
+                alert("No hay registros para este día.");
+            }
             
-            if(logsFiltradosDeFecha.length === 0) alert("No hay registros para este día.");
-            filtrarVistaReporte('entradas');
+            // Por defecto mostrar los que llegaron (Entradas)
+            filtrarVistaReporte('ENTRADA');
         }
 
-        function filtrarVistaReporte(filtro) {
+        function filtrarVistaReporte(tipo) {
             const cuerpo = document.getElementById('cuerpoReporte');
             const head = document.getElementById('headReporte');
             const titulo = document.getElementById('tituloReporte');
-            cuerpo.innerHTML = "";
-            const fechaStr = document.getElementById('reportDate').value;
-
-            // IDs únicos que tienen entrada ese día
-            const idsConEntrada = [...new Set(logsFiltradosDeFecha.filter(l => l.tipo === 'ENTRADA').map(l => l.id))];
-
-            if (filtro === 'entradas') {
-                titulo.innerText = `✅ LLEGARON (${fechaStr})`;
-                head.innerHTML = "<th>Hora Entrada</th><th>Código</th><th>Nombre</th><th>Sección</th>";
-                logsFiltradosDeFecha.filter(l => l.tipo === 'ENTRADA').forEach(l => {
+            const fechaTxt = document.getElementById('reportDate').value;
+            
+            cuerpo.innerHTML = ""; // Limpiar tabla
+            
+            if(tipo === 'ENTRADA' || tipo === 'SALIDA') {
+                titulo.innerText = tipo === 'ENTRADA' ? `✅ MIEMBROS QUE ENTRARON EL ${fechaTxt}` : `🚪 MIEMBROS QUE SALIERON EL ${fechaTxt}`;
+                head.innerHTML = `<tr><th>Hora</th><th>Código</th><th>Nombre</th><th>Sección</th></tr>`;
+                
+                // Filtrar todos los que coincidan con el tipo (Entrada o Salida)
+                const filtrados = logsSeleccionados.filter(l => l.tipo === tipo);
+                
+                filtrados.forEach(l => {
                     const p = db.personas[l.id] || {};
-                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${l.hora.split(',')[1]}</td><td>${l.id}</td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
+                    cuerpo.insertAdjacentHTML('beforeend', `
+                        <tr>
+                            <td>${l.hora.split(',')[1]}</td>
+                            <td><b>${l.id}</b></td>
+                            <td>${l.nombre}</td>
+                            <td style="color:var(--cr-red); font-weight:bold;">${p.puesto || '-'}</td>
+                        </tr>
+                    `);
                 });
             } 
-            else if (filtro === 'salidas') {
-                titulo.innerText = `🚪 SALIERON (${fechaStr})`;
-                head.innerHTML = "<th>Hora Salida</th><th>Código</th><th>Nombre</th><th>Sección</th>";
-                logsFiltradosDeFecha.filter(l => l.tipo === 'SALIDA').forEach(l => {
-                    const p = db.personas[l.id] || {};
-                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${l.hora.split(',')[1]}</td><td>${l.id}</td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
-                });
-            } 
-            else if (filtro === 'ausentes') {
-                titulo.innerText = `❌ NO LLEGARON (${fechaStr})`;
-                head.innerHTML = "<th>Código</th><th>Nombre</th><th>Sección</th><th>Acción</th>";
+            else if (tipo === 'AUSENTES') {
+                titulo.innerText = `❌ MIEMBROS AUSENTES EL ${fechaTxt}`;
+                head.innerHTML = `<tr><th>Código</th><th>Nombre</th><th>Sección</th><th>WhatsApp</th></tr>`;
+                
+                // Obtener lista de IDs que SI ENTRARON hoy
+                const idsPresentes = [...new Set(logsSeleccionados.filter(l => l.tipo === 'ENTRADA').map(l => l.id))];
+                
+                // Mostrar a los que NO están en esa lista
                 Object.entries(db.personas).forEach(([id, p]) => {
-                    if (!idsConEntrada.includes(id)) {
-                        cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${id}</td><td>${p.nombre}</td><td>${p.puesto || '-'}</td>
-                        <td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬 Avisar</button></td></tr>`);
+                    if(!idsPresentes.includes(id)) {
+                        cuerpo.insertAdjacentHTML('beforeend', `
+                            <tr>
+                                <td><b>${id}</b></td>
+                                <td>${p.nombre}</td>
+                                <td>${p.puesto || '-'}</td>
+                                <td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬 Avisar</button></td>
+                            </tr>
+                        `);
                     }
                 });
             }
         }
 
-        // --- SISTEMA GENERAL ---
+        // --- LÓGICA DE MIEMBROS (TABLA PRINCIPAL) ---
         function renderAlumnos() {
-            const t = document.getElementById('tablaAlumnos'); t.innerHTML = "";
+            const t = document.getElementById('tablaAlumnos'); 
+            t.innerHTML = "";
             const hoyISO = new Date().toISOString().split('T')[0];
-            const llegaronHoy = [...new Set(logsGlobal.filter(l => normalizarFecha(l.hora) === hoyISO && l.tipo === 'ENTRADA').map(l => l.id))];
+            
+            // IDs que marcaron entrada hoy
+            const presentesHoy = [...new Set(logsGlobal.filter(l => getFechaISO(l.hora) === hoyISO && l.tipo === 'ENTRADA').map(l => l.id))];
 
             Object.entries(db.personas).forEach(([id, p]) => {
-                const isPresent = llegaronHoy.includes(id);
+                const estaAqui = presentesHoy.includes(id);
                 t.insertAdjacentHTML('beforeend', `<tr>
-                    <td><span class="status-badge ${isPresent?'status-in':'status-none'}">${isPresent?'PRESENTE':'AUSENTE'}</span></td>
+                    <td><span class="status-badge ${estaAqui?'status-in':'status-none'}">${estaAqui?'LLEGÓ':'AUSENTE'}</span></td>
                     <td><b>${id}</b></td>
                     <td><input style="border:none;width:100%" value="${p.nombre}" onchange="db.personas['${id}'].nombre=this.value"></td>
                     <td><input style="border:none;width:100%;color:var(--cr-red);font-weight:bold;" value="${p.puesto||''}" onchange="db.personas['${id}'].puesto=this.value"></td>
@@ -262,24 +284,35 @@
             });
         }
 
+        // --- SISTEMA DE ESCANEO ---
         document.getElementById('lector').addEventListener('keydown', (e) => {
             if(e.key === 'Enter') {
                 const id = e.target.value.trim();
                 if(db.personas[id]) {
                     const hoyISO = new Date().toISOString().split('T')[0];
-                    const marcasHoy = logsGlobal.filter(l => l.id === id && normalizarFecha(l.hora) === hoyISO);
+                    const marcasHoy = logsGlobal.filter(l => l.id === id && getFechaISO(l.hora) === hoyISO);
                     const tipo = marcasHoy.length % 2 === 0 ? "ENTRADA" : "SALIDA";
-                    database.ref('logs').push({ id: id, nombre: db.personas[id].nombre, hora: new Date().toLocaleString(), tipo: tipo });
+                    
+                    database.ref('logs').push({ 
+                        id: id, 
+                        nombre: db.personas[id].nombre, 
+                        hora: new Date().toLocaleString(), 
+                        tipo: tipo 
+                    });
+
                     const res = document.getElementById('resBox'); res.style.display = 'block';
                     res.style.background = tipo === "ENTRADA" ? "#d4edda" : "#f8d7da";
                     document.getElementById('resNombre').innerText = db.personas[id].nombre;
-                    document.getElementById('resMov').innerText = "✅ " + tipo;
-                    setTimeout(() => res.style.display = 'none', 2000);
+                    document.getElementById('resMov').innerText = "✅ REGISTRADO COMO: " + tipo;
+                    setTimeout(() => res.style.display = 'none', 2500);
+                } else {
+                    alert("Miembro no encontrado");
                 }
                 e.target.value = '';
             }
         });
 
+        // --- FUNCIONES DE NAVEGACIÓN Y EXTRAS ---
         function mostrarVista(id) {
             document.getElementById('scan-view').style.display = (id==='scan-view')?'flex':'none';
             document.getElementById('parent-view').style.display = (id==='parent-view')?'flex':'none';
@@ -294,12 +327,17 @@
             for (let i = 0; i < rows.length; i++) { rows[i].style.display = (rows[i].textContent.toUpperCase().indexOf(filter) > -1) ? "" : "none"; }
         }
         function enviarWA(tel) { if(!tel) return; window.open(`https://wa.me/506${tel.replace(/\D/g,'')}`, '_blank'); }
-        function sincronizarConNube() { database.ref('personas').set(db.personas); alert("Sincronizado."); }
-        function cambiarTab(n) { document.getElementById('sec-alumnos').style.display = (n===1)?'block':'none'; document.getElementById('sec-reporte').style.display = (n===2)?'block':'none'; document.getElementById('tab1').className = (n===1)?'tab-btn active':'tab-btn'; document.getElementById('tab2').className = (n===2)?'tab-btn active':'tab-btn'; }
+        function sincronizarConNube() { database.ref('personas').set(db.personas); alert("Datos guardados en la nube."); }
+        function cambiarTab(n) { 
+            document.getElementById('sec-alumnos').style.display = (n===1)?'block':'none'; 
+            document.getElementById('sec-reporte').style.display = (n===2)?'block':'none'; 
+            document.getElementById('tab1').className = (n===1)?'tab-btn active':'tab-btn'; 
+            document.getElementById('tab2').className = (n===2)?'tab-btn active':'tab-btn'; 
+        }
         function agregarMiembroManual() { const id=prompt("Cédula:"); if(id) { db.personas[id]={nombre:prompt("Nombre:"), puesto:prompt("Sección:"), telefono:prompt("WhatsApp:")}; renderAlumnos(); } }
-        function borrarTodo() { if(confirm("¿Borrar todo?")) { database.ref().remove(); location.reload(); } }
-        function cambiarPasswordEscaner() { let n = prompt("Nueva Clave:"); if(n){ passEscaner=n; localStorage.setItem('PASS_SCAN',n); } }
-        function cambiarPasswordMaster() { let n = prompt("Nueva Clave:"); if(n){ passMaster=n; localStorage.setItem('PASS_MASTER',n); } }
+        function borrarTodo() { if(confirm("¿ESTÁ SEGURO? Se borrará toda la base de datos de la escuela.")) { database.ref().remove(); location.reload(); } }
+        function cambiarPasswordEscaner() { let n = prompt("Nueva Clave Escáner:"); if(n){ passEscaner=n; localStorage.setItem('PASS_SCAN',n); } }
+        function cambiarPasswordMaster() { let n = prompt("Nueva Clave Master:"); if(n){ passMaster=n; localStorage.setItem('PASS_MASTER',n); } }
         function cambiarFondo() { let url = prompt("URL Imagen:"); if(url){ localStorage.setItem('CUSTOM_BG', url); location.reload(); } }
 
         function consultarPadre() {
@@ -312,7 +350,7 @@
             database.ref('logs').orderByChild('id').equalTo(id).once('value', (s) => {
                 const list = document.getElementById('parentLogList'); list.innerHTML = "";
                 if(s.exists()){ s.forEach(c => { let l=c.val(); list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #eee;"><span>${l.hora}</span> - <b>${l.tipo}</b></div>` + list.innerHTML; }); }
-                else { list.innerHTML = "<p style='padding:10px;'>Sin movimientos.</p>"; }
+                else { list.innerHTML = "<p style='padding:10px;'>Sin registros de hoy.</p>"; }
                 document.getElementById('parentResult').style.display = 'block';
             });
         }
@@ -339,7 +377,7 @@
             const r = new FileReader(); 
             r.onload = (e) => { 
                 e.target.result.split('\n').forEach((l, i) => { if(i>0 && l.trim()){ let c=l.split(','); db.personas[c[0].trim()]={nombre:c[1]?.trim(), puesto:c[2]?.trim(), telefono:c[3]?.trim()}; } }); 
-                renderAlumnos(); alert("Cargado. Guarde en la nube.");
+                renderAlumnos(); alert("CSV importado. Recuerde presionar GUARDAR EN NUBE.");
             }; 
             r.readAsText(f); 
         }
