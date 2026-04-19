@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>SISTEMA CARPIO V42 - PREMIUM</title>
+    <title>SISTEMA CARPIO V42 - FINAL FIX</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -16,43 +16,39 @@
             --cr-blue: #002b7f; --cr-red: #ce1126;
         }
         
-        /* FONDO PATRIÓTICO SUTIL */
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden;
             background-color: #f8f9fa;
             background-image: 
-                linear-gradient(rgba(255,255,255,0.92), rgba(255,255,255,0.92)),
+                linear-gradient(rgba(255,255,255,0.94), rgba(255,255,255,0.94)),
                 repeating-linear-gradient(45deg, var(--cr-blue) 0, var(--cr-blue) 2px, transparent 0, transparent 50%),
                 repeating-linear-gradient(-45deg, var(--cr-red) 0, var(--cr-red) 2px, transparent 0, transparent 50%);
-            background-size: cover, 60px 60px, 60px 60px;
+            background-size: cover, 80px 80px, 80px 80px;
         }
 
-        .navbar { background: var(--dark); color: white; padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-bottom: 3px solid var(--cr-red); }
-        
+        .navbar { background: var(--dark); color: white; padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-bottom: 4px solid var(--cr-red); }
         #scan-view, #parent-view { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         
-        /* TARJETAS CON COLORES SÓLIDOS */
         .scanner-card { 
             background: #ffffff; padding: 35px; border-radius: 25px; 
             box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 450px; 
             text-align: center; border-top: 8px solid var(--cr-blue);
         }
 
-        .input-scan { width: 100%; padding: 15px; font-size: 1.5rem; border: 2px solid #e0e0e0; border-radius: 12px; text-align: center; outline: none; margin-top: 15px; transition: 0.3s; }
-        .input-scan:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(26,92,138,0.2); }
+        .input-scan { width: 100%; padding: 15px; font-size: 1.5rem; border: 2px solid #e0e0e0; border-radius: 12px; text-align: center; outline: none; margin-top: 15px; box-sizing: border-box; }
 
-        #master-panel { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fdfdfd; z-index: 1000; padding: 25px; box-sizing: border-box; overflow-y: auto; }
+        #master-panel { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 1000; padding: 25px; box-sizing: border-box; overflow-y: auto; }
         
-        /* BOTONES CORREGIDOS - NO TRANSPARENTES */
+        /* CORRECCIÓN DE BOTONES: FONDO SÓLIDO OBLIGATORIO */
         .btn { 
-            padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; 
+            padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; 
             font-weight: bold; color: white !important; display: inline-flex; 
-            align-items: center; gap: 8px; font-size: 0.85rem; transition: transform 0.1s, filter 0.2s;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            align-items: center; gap: 8px; font-size: 0.85rem; transition: 0.2s;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.16);
+            opacity: 1 !important; visibility: visible !important;
         }
-        .btn:active { transform: scale(0.96); }
-        .btn:hover { filter: brightness(1.1); }
+        .btn:hover { filter: brightness(1.2); transform: translateY(-1px); }
 
         .btn-m { background-color: var(--primary) !important; } 
         .btn-s { background-color: var(--accent) !important; } 
@@ -61,27 +57,24 @@
         .btn-w { background-color: var(--warning) !important; }
         .btn-dark { background-color: var(--dark) !important; }
 
-        .tab-btn { padding: 12px 28px; cursor: pointer; border: none; background: #e9ecef; border-radius: 8px; font-weight: bold; margin-right: 10px; color: var(--dark); }
-        .tab-btn.active { background: var(--cr-blue); color: white; }
-
-        .power-bar { background: #ffffff; padding: 18px; border-radius: 15px; display: flex; gap: 12px; align-items: center; margin-bottom: 20px; border: 1px solid #eee; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .power-bar { background: #f1f4f8; padding: 20px; border-radius: 15px; display: flex; gap: 12px; align-items: center; margin-bottom: 20px; border: 1px solid #ddd; flex-wrap: wrap; }
         
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; border-radius: 10px; overflow: hidden; }
-        th { background: #f1f4f8; padding: 15px; text-align: left; font-size: 0.85rem; color: var(--dark); text-transform: uppercase; letter-spacing: 1px; }
-        td { border-bottom: 1px solid #f1f1f1; padding: 12px 15px; font-size: 0.95rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        th { background: #e9ecef; padding: 15px; text-align: left; font-size: 0.85rem; color: var(--dark); text-transform: uppercase; }
+        td { border-bottom: 1px solid #eee; padding: 12px 15px; }
+
+        .tab-btn { padding: 12px 28px; cursor: pointer; border: none; background: #e9ecef; border-radius: 8px; font-weight: bold; margin-right: 10px; }
+        .tab-btn.active { background: var(--cr-blue); color: white; }
     </style>
 </head>
 <body id="main-body">
 
     <div class="navbar no-print">
-        <div style="display:flex; align-items:center; gap:10px;">
-            <div style="width:12px; height:12px; background:var(--cr-red); border-radius:50%;"></div>
-            <strong>ESCUELA LA CARPIO</strong>
-        </div>
+        <div><strong>ESCUELA LA CARPIO</strong> | Junta de Educación</div>
         <div style="display: flex; gap: 12px;">
             <button class="btn btn-w" onclick="mostrarVista('parent-view')">👨‍👩‍👧 PADRES</button>
             <button class="btn btn-i" onclick="pedirClaveEscaner()">📷 ESCÁNER</button>
-            <button class="btn btn-m" onclick="pedirClaveMaster()">🔓 MASTER</button>
+            <button class="btn btn-m" onclick="pedirClaveMaster()">🔓 PANEL MASTER</button>
         </div>
     </div>
 
@@ -91,69 +84,68 @@
                 <h2 style="margin:0; color:var(--cr-blue);">Registro de Acceso</h2>
                 <button class="btn btn-dark" onclick="cambiarPasswordEscaner()">🔑</button>
             </div>
-            <p id="cloud-status" style="font-size:0.9rem; color:#666;">☁️ Sincronizando...</p>
-            <input type="text" id="lector" class="input-scan" placeholder="Escanee el QR aquí..." autofocus>
-            <div id="resBox" style="margin-top:25px; display:none; padding:25px; border-radius:15px; border: 2px dashed rgba(0,0,0,0.1);">
-                <h2 id="resNombre" style="margin:0; color: var(--dark);"></h2>
-                <h3 id="resMov" style="margin:8px 0; font-weight:900; font-size:1.8rem;"></h3>
+            <p id="cloud-status">☁️ Conectando...</p>
+            <input type="text" id="lector" class="input-scan" placeholder="Escanee carné..." autofocus>
+            <div id="resBox" style="margin-top:20px; display:none; padding:20px; border-radius:15px; border: 2px solid #ddd;">
+                <h2 id="resNombre"></h2>
+                <h3 id="resMov"></h3>
             </div>
-            <button class="btn btn-d" style="margin-top:25px; width:100%; padding:15px;" onclick="cerrarVistaProtegida('scan-view')">SALIR DEL MODO ESCÁNER</button>
+            <button class="btn btn-d" style="margin-top:25px; width:100%" onclick="cerrarVistaProtegida('scan-view')">SALIR</button>
         </div>
     </div>
 
     <div id="parent-view">
         <div class="scanner-card" style="border-top-color: var(--accent);">
-            <h2 style="color: var(--accent);">Consulta Familiar</h2>
-            <p style="color:#777; margin-bottom:20px;">Ingrese la identificación para ver ingresos/salidas</p>
-            <input type="text" id="parentInput" class="input-scan" placeholder="Cédula o ID">
-            <button class="btn btn-s" style="width:100%; margin-top:20px; padding:18px; font-size:1rem;" onclick="consultarPadre()">CONSULTAR AHORA</button>
+            <h2 style="color: var(--accent);">Consulta para Padres</h2>
+            <input type="text" id="parentInput" class="input-scan" placeholder="Cédula del Estudiante">
+            <button class="btn btn-s" style="width:100%; margin-top:20px; padding:15px;" onclick="consultarPadre()">BUSCAR REGISTROS</button>
             <div id="parentResult" style="margin-top:20px; display:none;">
-                <h3 id="parentStudentName" style="color:var(--primary);"></h3>
-                <div id="parentLogList" class="history-list" style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 12px;"></div>
+                <h3 id="parentStudentName"></h3>
+                <div id="parentLogList" style="border: 1px solid #eee; border-radius:10px; max-height:250px; overflow-y:auto;"></div>
             </div>
         </div>
     </div>
 
     <div id="master-panel">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; border-bottom: 2px solid #eee; padding-bottom:15px;">
-            <h1 style="color:var(--primary); margin:0;">Panel de Control Administrativo</h1>
-            <div style="display:flex; gap:12px;">
-                <button class="btn btn-i" onclick="cambiarFondo()">🖼️ FONDO</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h1 style="color:var(--primary); margin:0;">Administración Maestro</h1>
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-i" onclick="cambiarFondo()">🖼️ EDITAR FONDO</button>
                 <button class="btn btn-w" onclick="cambiarPasswordMaster()">🔑 CLAVES</button>
                 <button class="btn btn-d" onclick="cerrarMaster()">❌ SALIR</button>
             </div>
         </div>
 
         <div class="tabs-container">
-            <button id="tab1" class="tab-btn active" onclick="cambiarTab(1)">👥 LISTA DE MIEMBROS</button>
-            <button id="tab2" class="tab-btn" onclick="cambiarTab(2)">📊 REPORTES DEL DÍA</button>
+            <button id="tab1" class="tab-btn active" onclick="cambiarTab(1)">👥 MIEMBROS</button>
+            <button id="tab2" class="tab-btn" onclick="cambiarTab(2)">📊 REPORTES HOY</button>
         </div>
 
         <div id="sec-alumnos">
             <div class="power-bar no-print">
-                <button class="btn btn-i" onclick="agregarMiembroManual()">➕ NUEVO</button>
-                <button class="btn btn-m" onclick="sincronizarConNube()">💾 SUBIR A LA NUBE</button>
+                <button class="btn btn-i" onclick="agregarMiembroManual()">➕ AGREGAR</button>
+                <button class="btn btn-m" onclick="sincronizarConNube()">💾 GUARDAR EN NUBE</button>
                 <button class="btn btn-s" onclick="imprimirTodosLosCarnets()">📇 CARNÉS GRUPAL</button>
-                <button class="btn btn-dark" onclick="exportarCSV()">📥 EXPORTAR</button>
-                <button class="btn btn-dark" onclick="document.getElementById('csvFile').click()">📤 IMPORTAR</button>
+                <button class="btn btn-dark" onclick="exportarCSV()">📥 EXPORTAR CSV</button>
+                <button class="btn btn-dark" onclick="document.getElementById('csvFile').click()">📤 IMPORTAR CSV</button>
                 <input type="file" id="csvFile" accept=".csv" style="display:none;" onchange="importarCSV()">
-                <button class="btn btn-d" onclick="borrarTodo()">🧨 FORMATEAR</button>
+                <button class="btn btn-d" onclick="borrarTodo()">🧨 BORRAR TODO</button>
             </div>
-            <input type="text" id="busqueda" placeholder="🔍 Buscar por nombre o cédula..." onkeyup="filtrar()" style="width:100%; padding:15px; margin-bottom:15px; border-radius:10px; border:1px solid #ddd;">
+            <input type="text" id="busqueda" placeholder="🔍 Buscar..." onkeyup="filtrar()" style="width:100%; padding:12px; margin-bottom:15px; border-radius:8px; border:1px solid #ddd;">
             <table>
-                <thead><tr><th>Código QR</th><th>Identificación</th><th>Nombre Completo</th><th>WhatsApp</th><th class="no-print">Acciones</th></tr></thead>
+                <thead><tr><th>QR</th><th>Cédula</th><th>Nombre</th><th>WhatsApp</th><th class="no-print">Acciones</th></tr></thead>
                 <tbody id="tablaAlumnos"></tbody>
             </table>
         </div>
 
         <div id="sec-reporte" style="display:none;">
             <div class="power-bar no-print">
-                <button class="btn btn-d" onclick="exportarReportePDF()">📕 GENERAR PDF</button>
+                <button class="btn btn-d" onclick="exportarReportePDF()">📕 GUARDAR PDF</button>
                 <button class="btn btn-i" onclick="compartirPorCorreo()">📧 ENVIAR CORREO</button>
-                <button class="btn btn-w" onclick="if(confirm('¿Limpiar historial?')) database.ref('logs').remove()">🧹 REINICIAR DÍA</button>
+                <button class="btn btn-w" onclick="if(confirm('¿Limpiar historial?')) database.ref('logs').remove()">🧹 LIMPIAR</button>
             </div>
             <table id="tabla-logs">
-                <thead><tr><th>Hora</th><th>ID</th><th>Nombre</th><th>Acción</th></tr></thead>
+                <thead><tr><th>Hora</th><th>Cédula</th><th>Nombre</th><th>Tipo</th></tr></thead>
                 <tbody id="tablaLog"></tbody>
             </table>
         </div>
@@ -172,11 +164,11 @@
         const fondoGuardado = localStorage.getItem('CUSTOM_BG');
         if(fondoGuardado) document.getElementById('main-body').style.background = `url('${fondoGuardado}') no-repeat center center fixed`;
 
-        database.ref('personas').on('value', (s) => { db.personas = s.val() || {}; renderAlumnos(); document.getElementById('cloud-status').innerText="✅ Base de datos conectada"; });
+        database.ref('personas').on('value', (s) => { db.personas = s.val() || {}; renderAlumnos(); document.getElementById('cloud-status').innerText="✅ Conectado"; });
         database.ref('logs').on('value', (s) => { 
             const t = document.getElementById('tablaLog'); t.innerHTML = "";
             let arr = []; s.forEach(c => arr.unshift(c.val()));
-            arr.forEach(l => t.insertAdjacentHTML('beforeend', `<tr><td><b>${l.hora.split(',')[1]}</b></td><td>${l.id}</td><td>${l.nombre}</td><td><span style="color:${l.tipo==='ENTRADA'?'green':'red'}">${l.tipo}</span></td></tr>`));
+            arr.forEach(l => t.insertAdjacentHTML('beforeend', `<tr><td>${l.hora.split(',')[1]}</td><td>${l.id}</td><td>${l.nombre}</td><td>${l.tipo}</td></tr>`));
         });
 
         function mostrarVista(id) {
@@ -184,17 +176,14 @@
             document.getElementById('parent-view').style.display = (id==='parent-view')?'flex':'none';
         }
 
-        function pedirClaveEscaner() { if(prompt("Contraseña de Escáner:") === passEscaner) mostrarVista('scan-view'); }
-        function pedirClaveMaster() { if(prompt("Contraseña Administrativa:") === passMaster) document.getElementById('master-panel').style.display = 'block'; }
+        function pedirClaveEscaner() { if(prompt("Clave Escáner:") === passEscaner) mostrarVista('scan-view'); }
+        function pedirClaveMaster() { if(prompt("Clave Master:") === passMaster) document.getElementById('master-panel').style.display = 'block'; }
         function cerrarMaster() { document.getElementById('master-panel').style.display = 'none'; }
         function cerrarVistaProtegida(id) { document.getElementById(id).style.display = 'none'; mostrarVista('parent-view'); }
 
         function cambiarFondo() {
-            let url = prompt("Ingrese URL de imagen (dejar vacío para fondo patriótico):", fondoGuardado || "");
-            if(url !== null) {
-                localStorage.setItem('CUSTOM_BG', url);
-                location.reload();
-            }
+            let url = prompt("Link de imagen:", fondoGuardado || "");
+            if(url !== null) { localStorage.setItem('CUSTOM_BG', url); location.reload(); }
         }
 
         function cambiarPasswordMaster() { let n = prompt("Nueva Clave Master:"); if(n){ passMaster=n; localStorage.setItem('PASS_MASTER',n); } }
@@ -208,10 +197,9 @@
                     !marcasHoy[id] ? marcasHoy[id] = true : delete marcasHoy[id];
                     database.ref('logs').push({ id: id, nombre: db.personas[id].nombre, hora: new Date().toLocaleString(), tipo: tipo });
                     const res = document.getElementById('resBox'); res.style.display = 'block';
-                    res.style.borderColor = tipo === "ENTRADA" ? "#27ae60" : "#c0392b";
+                    res.style.background = tipo === "ENTRADA" ? "#d4edda" : "#f8d7da";
                     document.getElementById('resNombre').innerText = db.personas[id].nombre;
-                    document.getElementById('resMov').innerText = tipo;
-                    document.getElementById('resMov').style.color = tipo === "ENTRADA" ? "#27ae60" : "#c0392b";
+                    document.getElementById('resMov').innerText = "✅ " + tipo;
                     setTimeout(() => res.style.display = 'none', 2000);
                 }
                 e.target.value = '';
@@ -220,12 +208,12 @@
 
         function consultarPadre() {
             const id = document.getElementById('parentInput').value.trim();
-            if(!db.personas[id]) return alert("Identificación no encontrada en el sistema.");
+            if(!db.personas[id]) return alert("ID no encontrado");
             document.getElementById('parentStudentName').innerText = db.personas[id].nombre;
             database.ref('logs').orderByChild('id').equalTo(id).once('value', (s) => {
                 const list = document.getElementById('parentLogList'); list.innerHTML = "";
-                if(s.exists()){ s.forEach(c => { let l=c.val(); list.innerHTML = `<div style="padding:12px; border-bottom:1px solid #eee; display:flex; justify-content:space-between;"><span>${l.hora}</span><b>${l.tipo}</b></div>` + list.innerHTML; }); }
-                else { list.innerHTML = "<p style='padding:15px; color:#999;'>Sin registros para el día de hoy.</p>"; }
+                if(s.exists()){ s.forEach(c => { let l=c.val(); list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #eee;"><span>${l.hora}</span> - <b>${l.tipo}</b></div>` + list.innerHTML; }); }
+                else { list.innerHTML = "<p style='padding:10px;'>Sin marcas hoy.</p>"; }
                 document.getElementById('parentResult').style.display = 'block';
             });
         }
@@ -237,9 +225,9 @@
                 t.insertAdjacentHTML('beforeend', `<tr>
                     <td><div id="${qrId}"></div></td>
                     <td><b>${id}</b></td>
-                    <td><input style="border:none; width:100%;" value="${p.nombre}" onchange="db.personas['${id}'].nombre=this.value"></td>
-                    <td><input style="border:none; width:100%;" value="${p.telefono||''}" onchange="db.personas['${id}'].telefono=this.value"></td>
-                    <td class="no-print" style="display:flex; gap:8px;">
+                    <td><input style="border:none; width:100%" value="${p.nombre}" onchange="db.personas['${id}'].nombre=this.value"></td>
+                    <td><input style="border:none; width:100%" value="${p.telefono||''}" onchange="db.personas['${id}'].telefono=this.value"></td>
+                    <td class="no-print" style="display:flex; gap:5px;">
                         <button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬</button>
                         <button class="btn btn-i" onclick="descargarCarnet('${id}')">📇</button>
                         <button class="btn btn-d" onclick="if(confirm('¿Borrar?')) database.ref('personas/'+'${id}').remove()">🗑️</button>
@@ -249,91 +237,75 @@
             });
         }
 
-        function sincronizarConNube() { database.ref('personas').set(db.personas); alert("Datos sincronizados en la nube correctamente."); }
-        function enviarWA(tel) { if(!tel) return alert("Número no registrado."); window.open(`https://wa.me/506${tel.replace(/\D/g,'')}`, '_blank'); }
-        function exportarReportePDF() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text("REPORTE ASISTENCIA - ESCUELA LA CARPIO", 14, 15); doc.autoTable({ html: '#tabla-logs', marginTop: 20 }); doc.save("Reporte_Asistencia.pdf"); }
-        function compartirPorCorreo() { let body = "Reporte Carpio:\n\n"; document.querySelectorAll("#tablaLog tr").forEach(tr => body += tr.innerText + "\n"); window.location.href = `mailto:?subject=Reporte de Asistencia&body=${encodeURIComponent(body)}`; }
-        function agregarMiembroManual() { const id=prompt("Identificación/Cédula:"); if(id) { db.personas[id]={nombre:prompt("Nombre Completo:"), puesto:"Estudiante", telefono:prompt("Teléfono WhatsApp:")}; renderAlumnos(); } }
+        function sincronizarConNube() { database.ref('personas').set(db.personas); alert("Sincronizado."); }
+        function enviarWA(tel) { if(!tel) return; window.open(`https://wa.me/506${tel.replace(/\D/g,'')}`, '_blank'); }
+        function exportarReportePDF() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text("REPORTE ASISTENCIA", 14, 15); doc.autoTable({ html: '#tabla-logs', marginTop: 20 }); doc.save("Reporte.pdf"); }
+        function compartirPorCorreo() { let body = ""; document.querySelectorAll("#tablaLog tr").forEach(tr => body += tr.innerText + "\n"); window.location.href = `mailto:?subject=Reporte&body=${encodeURIComponent(body)}`; }
+        function agregarMiembroManual() { const id=prompt("Cédula:"); if(id) { db.personas[id]={nombre:prompt("Nombre:"), puesto:"Estudiante", telefono:prompt("WhatsApp:")}; renderAlumnos(); } }
         function importarCSV() { 
             const f = document.getElementById('csvFile').files[0]; 
             const r = new FileReader(); 
             r.onload = (e) => { 
                 e.target.result.split('\n').forEach((l, i) => { if(i>0 && l.trim()){ let c=l.split(','); db.personas[c[0].trim()]={nombre:c[1]?.trim(), puesto:"Estudiante", telefono:c[2]?.trim()}; } }); 
-                renderAlumnos(); alert("CSV cargado localmente. No olvides GUARDAR EN NUBE.");
+                renderAlumnos(); alert("Cargado. Dele a GUARDAR.");
             }; 
             r.readAsText(f); 
         }
-        function exportarCSV() { let csv = "ID,Nombre,Telefono\n"; Object.entries(db.personas).forEach(([id,p]) => csv += `${id},${p.nombre},${p.telefono}\n`); const a = document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download="Lista_Miembros.csv"; a.click(); }
+        function exportarCSV() { let csv = "ID,Nombre,Telefono\n"; Object.entries(db.personas).forEach(([id,p]) => csv += `${id},${p.nombre},${p.telefono}\n`); const a = document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download="Lista.csv"; a.click(); }
+        
         function cambiarTab(n) {
             document.getElementById('sec-alumnos').style.display = (n===1)?'block':'none';
-            document.getElementById('tab1').className = (n===1)?'tab-btn active':'tab-btn';
             document.getElementById('sec-reporte').style.display = (n===2)?'block':'none';
+            document.getElementById('tab1').className = (n===1)?'tab-btn active':'tab-btn';
             document.getElementById('tab2').className = (n===2)?'tab-btn active':'tab-btn';
         }
+
         function filtrar() { let q = document.getElementById('busqueda').value.toLowerCase(); document.querySelectorAll("#tablaAlumnos tr").forEach(tr => tr.style.display = tr.innerText.toLowerCase().includes(q) ? "" : "none"); }
 
-        // CARNÉ CREATIVO Y PROFESIONAL
         function descargarCarnet(id) {
             const p = db.personas[id];
             const win = window.open('','','width=350,height=500');
             win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
             <style>
-                body { font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #eee; }
-                .card { width: 280px; height: 420px; background: white; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); overflow: hidden; position: relative; border: 1px solid #ddd; }
-                .header { background: #002b7f; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; padding: 10px; }
-                .header h2 { margin: 0; font-size: 1rem; letter-spacing: 1px; }
-                .header p { margin: 0; font-size: 0.6rem; opacity: 0.8; }
-                .qr-container { background: white; padding: 15px; border-radius: 15px; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: inline-block; }
-                .info { padding: 20px; text-align: center; }
-                .info .id-label { font-size: 1.4rem; font-weight: 900; color: #002b7f; margin: 10px 0 5px 0; font-family: monospace; }
-                .info .name { font-size: 1.1rem; font-weight: bold; color: #333; margin-bottom: 5px; }
-                .footer { position: absolute; bottom: 0; width: 100%; height: 15px; background: linear-gradient(90deg, #002b7f 33%, #ffffff 33%, #ffffff 66%, #ce1126 66%); }
+                body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #eee; }
+                .card { width: 280px; height: 400px; background: white; border-radius: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); overflow: hidden; border: 1px solid #ddd; }
+                .header { background: #002b7f; color: white; padding: 15px; text-align: center; }
+                .header h2 { margin: 0; font-size: 1rem; }
+                .qr-box { padding: 20px; display: flex; justify-content: center; }
+                .info { text-align: center; padding: 10px; }
+                .id-tag { font-family: monospace; font-size: 1.5rem; font-weight: bold; color: #002b7f; margin: 10px 0; }
+                .footer { height: 10px; background: linear-gradient(90deg, #002b7f 33%, #fff 33%, #fff 66%, #ce1126 66%); }
             </style></head>
             <body>
                 <div class="card">
-                    <div class="header">
-                        <h2>ESCUELA LA CARPIO</h2>
-                        <p>JUNTA DE EDUCACIÓN</p>
-                    </div>
-                    <div style="text-align:center;">
-                        <div class="qr-container"><div id="q"></div></div>
-                    </div>
+                    <div class="header"><h2>ESCUELA LA CARPIO</h2><small>IDENTIFICACIÓN ESTUDIANTIL</small></div>
+                    <div class="qr-box"><div id="q"></div></div>
                     <div class="info">
-                        <div class="id-label">${id}</div>
-                        <div class="name">${p.nombre}</div>
-                        <p style="font-size:0.7rem; color:#888;">Carné Estudiantil Oficial</p>
+                        <div class="id-tag">${id}</div>
+                        <div style="font-weight:bold;">${p.nombre}</div>
                     </div>
-                    <div class="footer"></div>
+                    <div class="footer" style="position:absolute; bottom:0; width:100%;"></div>
                 </div>
-                <script>
-                    new QRCode(document.getElementById("q"),{text:"${id}",width:140,height:140,colorDark:"#000",colorLight:"#fff",correctLevel:QRCode.CorrectLevel.H});
-                    setTimeout(()=>window.print(),800);
-                <\/script>
+                <script>new QRCode(document.getElementById("q"),{text:"${id}",width:140,height:140});setTimeout(()=>window.print(),800);<\/script>
             </body></html>`);
             win.document.close();
         }
 
         function imprimirTodosLosCarnets() {
             const win = window.open('','');
-            win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
-            <style>
-                body { display: flex; flex-wrap: wrap; gap: 20px; padding: 20px; font-family: sans-serif; }
-                .card-mini { width: 200px; border: 1px solid #ccc; border-radius: 12px; padding: 15px; text-align: center; background: #fff; page-break-inside: avoid; }
-                .id-text { font-family: monospace; font-weight: bold; font-size: 1.2rem; margin: 8px 0; color: #002b7f; }
-            </style></head><body>`);
+            win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{display:flex;flex-wrap:wrap;gap:15px;padding:20px;}</style></head><body>`);
             Object.entries(db.personas).forEach(([id,p]) => {
-                win.document.write(`<div class="card-mini">
-                    <div style="font-size:0.6rem; margin-bottom:10px;">ESCUELA LA CARPIO</div>
-                    <div id="qr-${id.replace(/\W/g,'')}" style="display:flex; justify-content:center;"></div>
-                    <div class="id-text">${id}</div>
-                    <div style="font-size:0.8rem; font-weight:bold;">${p.nombre}</div>
+                win.document.write(`<div style="width:180px;border:1px solid #000;padding:10px;text-align:center;border-radius:10px;">
+                    <div id="qr-${id.replace(/\W/g,'')}" style="display:flex;justify-content:center;"></div>
+                    <div style="font-weight:bold;margin-top:10px;">${id}</div>
+                    <small>${p.nombre}</small>
                 </div>`);
             });
             win.document.write(`<script>${Object.keys(db.personas).map(id => `new QRCode(document.getElementById("qr-${id.replace(/\W/g,'')}"),{text:\"${id}\",width:100,height:100});`).join('\n')} setTimeout(()=>window.print(),1500);<\/script></body></html>`);
             win.document.close();
         }
 
-        function borrarTodo() { if(confirm("¿Desea borrar toda la base de datos de la nube? Esto es irreversible.")) { database.ref().remove(); location.reload(); } }
+        function borrarTodo() { if(confirm("¿Borrar todo?")) { database.ref().remove(); location.reload(); } }
     </script>
 </body>
 </html>
