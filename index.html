@@ -241,6 +241,75 @@
                 doc.save("asistencia.pdf");
             });
         }
+        <!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>RESCATE - ESCUELA LA CARPIO</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; background: #f0f2f5; }
+        .card { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: inline-block; }
+        .btn-emergency { background: #ce1126; color: white; padding: 20px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 1.2rem; }
+        .status { margin-top: 20px; color: #666; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1 style="color: #002b7f;">SISTEMA LA CARPIO</h1>
+        <p>Si las contraseñas no funcionan, usa este botón de emergencia:</p>
+        
+        <button class="btn-emergency" onclick="entrarDirecto()">🔓 ENTRAR AL PANEL MASTER (SIN CLAVE)</button>
+        
+        <div class="status" id="msg">Esperando acción...</div>
+    </div>
+
+    <div id="master-panel" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:white; padding:30px; overflow-y:auto; z-index:9999;">
+        <h2>PANEL MASTER DESBLOQUEADO</h2>
+        <p>Estás dentro. Ahora puedes gestionar los datos.</p>
+        <button onclick="location.reload()" style="padding:10px; background:#333; color:white;">CERRAR Y VOLVER A INICIO</button>
+        <hr>
+        <div id="contenido-base">
+            <h3>Cargando lista de alumnos...</h3>
+            <div id="lista"></div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURACIÓN DE TU FIREBASE (Copia el tuyo aquí si es diferente)
+        const firebaseConfig = { databaseURL: "https://escuela-la-carpio-default-rtdb.firebaseio.com/" };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        function entrarDirecto() {
+            // 1. Limpiamos TODA la memoria del navegador para quitar bloqueos
+            localStorage.clear();
+            
+            // 2. Mostramos el panel directamente saltándonos el prompt
+            document.getElementById('master-panel').style.display = 'block';
+            document.getElementById('msg').innerText = "Acceso forzado exitoso.";
+            
+            cargarDatos();
+        }
+
+        function cargarDatos() {
+            database.ref('estudiantes').on('value', (snapshot) => {
+                const lista = document.getElementById('lista');
+                lista.innerHTML = "";
+                if(snapshot.exists()) {
+                    snapshot.forEach(hijo => {
+                        lista.innerHTML += `<p>✅ ${hijo.key} - ${hijo.val().nombre} (${hijo.val().seccion})</p>`;
+                    });
+                } else {
+                    lista.innerHTML = "<p>No hay alumnos en la base de datos de Firebase.</p>";
+                }
+            });
+        }
+    </script>
+</body>
+</html>
     </script>
 </body>
 </html>
