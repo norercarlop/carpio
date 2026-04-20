@@ -55,7 +55,8 @@
         .status-in { background: #d4edda; color: #155724; }
         .status-none { background: #f8d7da; color: #721c24; }
         
-        #reader { width: 100%; border-radius: 15px; overflow: hidden; margin-top: 15px; display: none; }
+        /* Estilos optimizados para el contenedor de la cámara */
+        #reader { width: 100%; border-radius: 15px; overflow: hidden; margin-top: 15px; display: none; border: 2px solid var(--info); background: #000; }
     </style>
 </head>
 <body>
@@ -75,7 +76,7 @@
             <input type="text" id="lector" class="input-scan" placeholder="Escanee carné..." autofocus>
             
             <div id="reader"></div>
-            <button id="btnCamara" class="btn btn-i" style="width:100%; margin-top:15px;" onclick="toggleCamara()">📱 USAR CÁMARA DEL CELULAR</button>
+            <button id="btnCamara" class="btn btn-i" style="width:100%; margin-top:15px;" onclick="toggleCamara()">📷 INICIAR CÁMARA (PC/MÓVIL)</button>
 
             <div id="resBox" style="margin-top:20px; display:none; padding:20px; border-radius:15px; border: 2px solid #ddd;">
                 <h2 id="resNombre"></h2>
@@ -172,9 +173,8 @@
     </div>
 
     <script>
-        // CONFIGURACIÓN INICIAL
+        // CONFIGURACIÓN INICIAL (SE MANTIENE)
         let NUMERO_OFICIAL_JUNTA = "88888888"; 
-
         const firebaseConfig = { databaseURL: "https://escuela-la-carpio-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
@@ -186,8 +186,6 @@
         let passEscaner = localStorage.getItem('PASS_SCAN') || "1234";
 
         document.getElementById('reportDate').valueAsDate = new Date();
-
-        // Obtener el número oficial de la base de datos si existe
         database.ref('config/numeroOficial').on('value', (s) => { if(s.val()) NUMERO_OFICIAL_JUNTA = s.val(); });
 
         function coincideFecha(horaLog, fechaInputISO) {
@@ -207,29 +205,41 @@
             renderAlumnos(); 
         });
 
-        function editarNumeroJunta() {
-            let n = prompt("Ingrese el número de WhatsApp oficial (solo números):", NUMERO_OFICIAL_JUNTA);
-            if(n) {
-                database.ref('config/numeroOficial').set(n);
-                alert("Número oficial actualizado.");
-            }
-        }
-
-        // --- LÓGICA DE ESCANEO ---
+        // --- LÓGICA DE ESCANEO MEJORADA ---
         function procesarEscaneo(id) {
             id = id.trim();
+            if(!id) return;
+
             if(db.personas[id]) {
                 const hISO = new Date().toISOString().split('T')[0];
                 const marcas = logsGlobal.filter(l => (l.fechaISO?l.fechaISO===hISO:coincideFecha(l.hora, hISO)) && l.id === id);
                 const tieneE = marcas.some(l => l.tipo === 'ENTRADA'), tieneS = marcas.some(l => l.tipo === 'SALIDA');
+                
                 let tipo = "";
-                if (!tieneE) tipo = "ENTRADA"; else if (!tieneS) tipo = "SALIDA"; else { alert("Ya registró Entrada y Salida hoy."); return; }
-                database.ref('logs').push({ id: id, nombre: db.personas[id].nombre, hora: new Date().toLocaleString(), fechaISO: hISO, tipo: tipo });
-                const res = document.getElementById('resBox'); res.style.display = 'block'; res.style.background = tipo === "ENTRADA" ? "#d4edda" : "#f8d7da";
-                document.getElementById('resNombre').innerText = db.personas[id].nombre; document.getElementById('resMov').innerText = "✅ " + tipo;
-                setTimeout(() => res.style.display = 'none', 2000);
+                if (!tieneE) tipo = "ENTRADA"; 
+                else if (!tieneS) tipo = "SALIDA"; 
+                else { 
+                    alert("El usuario " + db.personas[id].nombre + " ya registró entrada y salida hoy."); 
+                    return; 
+                }
+
+                database.ref('logs').push({ 
+                    id: id, 
+                    nombre: db.personas[id].nombre, 
+                    hora: new Date().toLocaleString(), 
+                    fechaISO: hISO, 
+                    tipo: tipo 
+                });
+
+                const res = document.getElementById('resBox'); 
+                res.style.display = 'block'; 
+                res.style.background = tipo === "ENTRADA" ? "#d4edda" : "#f8d7da";
+                document.getElementById('resNombre').innerText = db.personas[id].nombre; 
+                document.getElementById('resMov').innerText = "✅ REGISTRO DE " + tipo;
+                
+                setTimeout(() => { res.style.display = 'none'; }, 3000);
             } else {
-                alert("Código no reconocido.");
+                alert("El código '" + id + "' no está registrado en el sistema.");
             }
         }
 
@@ -240,46 +250,74 @@
             }
         });
 
-        // --- LÓGICA DE CÁMARA (MOBILE) ---
-        function toggleCamara() {
+        // --- LÓGICA DE CÁMARA UNIVERSAL (PC Y MÓVIL) ---
+        async function toggleCamara() {
             const readerDiv = document.getElementById('reader');
+            const btn = document.getElementById('btnCamara');
+
             if (readerDiv.style.display === 'none') {
                 readerDiv.style.display = 'block';
+                btn.innerText = "⚠️ CARGANDO CÁMARA...";
+                btn.classList.replace('btn-i', 'btn-w');
+
                 html5QrCode = new Html5Qrcode("reader");
-                html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 },
+                
+                const config = { fps: 15, qrbox: { width: 250, height: 250 } };
+
+                // Intenta usar la cámara trasera en móviles, o la cámara por defecto en PC
+                html5QrCode.start(
+                    { facingMode: "environment" }, 
+                    config,
                     (decodedText) => {
                         procesarEscaneo(decodedText);
-                        pararCamara();
+                        // Emitir un sonido o vibración podría ser útil aquí
+                        if (navigator.vibrate) navigator.vibrate(100);
                     }
-                ).catch(err => alert("Error de cámara: " + err));
-                document.getElementById('btnCamara').innerText = "❌ CERRAR CÁMARA";
-            } else {
-                pararCamara();
-            }
-        }
-
-        function pararCamara() {
-            if(html5QrCode) {
-                html5QrCode.stop().then(() => {
-                    document.getElementById('reader').style.display = 'none';
-                    document.getElementById('btnCamara').innerText = "📱 USAR CÁMARA DEL CELULAR";
+                ).then(() => {
+                    btn.innerText = "❌ DETENER CÁMARA";
+                    btn.classList.replace('btn-w', 'btn-d');
+                }).catch(err => {
+                    console.error(err);
+                    alert("No se pudo acceder a la cámara. Asegúrese de dar permisos.");
+                    readerDiv.style.display = 'none';
+                    btn.innerText = "📷 INICIAR CÁMARA (PC/MÓVIL)";
+                    btn.classList.replace('btn-w', 'btn-i');
                 });
+            } else {
+                await pararCamara();
             }
         }
 
-        // --- CONSULTA PADRES ---
+        async function pararCamara() {
+            if(html5QrCode) {
+                try {
+                    await html5QrCode.stop();
+                    document.getElementById('reader').style.display = 'none';
+                    const btn = document.getElementById('btnCamara');
+                    btn.innerText = "📷 INICIAR CÁMARA (PC/MÓVIL)";
+                    btn.classList.replace('btn-d', 'btn-i');
+                } catch (err) {
+                    console.error("Error al detener:", err);
+                }
+            }
+        }
+
+        // --- EL RESTO DE LAS FUNCIONES SE MANTIENEN IGUAL ---
+        function editarNumeroJunta() {
+            let n = prompt("Ingrese el número de WhatsApp oficial (solo números):", NUMERO_OFICIAL_JUNTA);
+            if(n) { database.ref('config/numeroOficial').set(n); alert("Número oficial actualizado."); }
+        }
+
         function consultarPadre() {
             const id = document.getElementById('parentInput').value.trim();
             if(!db.personas[id]) return alert("Código no encontrado.");
             const p = db.personas[id];
             document.getElementById('parentStudentName').innerText = p.nombre;
             document.getElementById('parentStudentPuesto').innerText = "Sección: " + (p.puesto || "N/A");
-            
             document.getElementById('btnConsultaWA').onclick = () => { 
                 const mensaje = `Hola, quisiera realizar una consulta sobre el estudiante: ${p.nombre} (ID: ${id}).`;
                 window.open(`https://wa.me/506${NUMERO_OFICIAL_JUNTA}?text=${encodeURIComponent(mensaje)}`, '_blank');
             };
-
             database.ref('logs').orderByChild('id').equalTo(id).once('value', (s) => {
                 const list = document.getElementById('parentLogList'); list.innerHTML = "";
                 if(s.exists()){ s.forEach(c => { let l=c.val(); list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #eee;"><span>${l.hora}</span> - <b>${l.tipo}</b></div>` + list.innerHTML; }); }
@@ -288,7 +326,6 @@
             });
         }
 
-        // --- FUNCIONES DE SOPORTE (Manteniendo lo anterior) ---
         function filtrarVistaReporte(tipo) {
             const fechaBuscada = document.getElementById('reportDate').value;
             if(!fechaBuscada) return alert("Seleccione una fecha");
@@ -344,7 +381,12 @@
             doc.save(`Reporte_${document.getElementById('reportDate').value}.pdf`);
         }
 
-        function mostrarVista(id) { document.getElementById('scan-view').style.display = (id==='scan-view')?'flex':'none'; document.getElementById('parent-view').style.display = (id==='parent-view')?'flex':'none'; if(id!=='scan-view') pararCamara(); }
+        function mostrarVista(id) { 
+            document.getElementById('scan-view').style.display = (id==='scan-view')?'flex':'none'; 
+            document.getElementById('parent-view').style.display = (id==='parent-view')?'flex':'none'; 
+            if(id!=='scan-view') pararCamara(); 
+        }
+
         function pedirClaveEscaner() { if(prompt("Clave:") === passEscaner) mostrarVista('scan-view'); }
         function pedirClaveMaster() { if(prompt("Clave:") === passMaster) document.getElementById('master-panel').style.display = 'block'; }
         function cerrarMaster() { document.getElementById('master-panel').style.display = 'none'; }
@@ -358,18 +400,21 @@
         function cambiarPasswordEscaner() { let n = prompt("Nueva Clave:"); if(n){ passEscaner=n; localStorage.setItem('PASS_SCAN',n); } }
         function cambiarPasswordMaster() { let n = prompt("Nueva Clave:"); if(n){ passMaster=n; localStorage.setItem('PASS_MASTER',n); } }
         function cambiarFondo() { let url = prompt("URL Imagen:"); if(url){ localStorage.setItem('CUSTOM_BG', url); location.reload(); } }
+        
         function descargarCarnet(id) {
             const p = db.personas[id];
             const win = window.open('','','width=350,height=500');
             win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}.card{width:280px;height:420px;background:white;border-radius:20px;box-shadow:0 10px 20px rgba(0,0,0,0.2);overflow:hidden;position:relative;border:1px solid #ddd;}.header{background:#002b7f;height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;text-align:center;}.qr-container{background:white;padding:15px;border-radius:15px;margin-top:20px;display:inline-block;border:1px solid #eee;}.info{padding:20px;text-align:center;}.id-label{font-size:1.6rem;font-weight:900;color:#002b7f;margin:10px 0;}.footer{position:absolute;bottom:0;width:100%;height:15px;background:linear-gradient(90deg,#002b7f 33%,#ffffff 33%,#ffffff 66%,#ce1126 66%);}</style></head><body><div class="card"><div class="header"><h2>ESCUELA LA CARPIO</h2><small>IDENTIFICACIÓN</small></div><div style="text-align:center;"><div class="qr-container"><div id="q"></div></div></div><div class="info"><div class="id-label">${id}</div><div style="font-weight:bold;font-size:1.2rem;">${p.nombre}</div><div style="color:#ce1126;font-weight:bold;margin-top:5px;">${p.puesto||''}</div></div><div class="footer"></div></div><script>new QRCode(document.getElementById("q"),{text:"${id}",width:140,height:140});setTimeout(()=>window.print(),800);<\/script></body></html>`);
             win.document.close();
         }
+
         function imprimirTodosLosCarnets() {
             const win = window.open('',''); win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head><body>`);
             Object.entries(db.personas).forEach(([id,p]) => { win.document.write(`<div style="width:200px;border:1px solid #333;padding:10px;text-align:center;display:inline-block;margin:5px;"><div id="qr-${id.replace(/\W/g,'')}"></div><b>${id}</b><br>${p.nombre}</div>`); });
             win.document.write(`<script>${Object.keys(db.personas).map(id => `new QRCode(document.getElementById("qr-${id.replace(/\W/g,'')}"),{text:\"${id}\",width:100,height:100});`).join('\n')} setTimeout(()=>window.print(),1500);<\/script></body></html>`);
             win.document.close();
         }
+
         function importarCSV() { 
             const f = document.getElementById('csvFile').files[0]; const r = new FileReader(); 
             r.onload = (e) => { e.target.result.split('\n').forEach((l, i) => { if(i>0 && l.trim()){ let c=l.split(','); db.personas[c[0].trim()]={nombre:c[1]?.trim(), puesto:c[2]?.trim(), telefono:c[3]?.trim()}; } }); renderAlumnos(); alert("Importado."); }; 
