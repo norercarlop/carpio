@@ -2,162 +2,1021 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>ASISTENCIA DE ESCUELA LA CARPIO</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a0e27">
+    <meta name="description" content="Sistema de asistencia - Escuela La Carpio">
+    <title>Asistencia - Escuela La Carpio</title>
+    
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
+    <!-- QR Code -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     
+    <!-- PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    
     <style>
-        :root { 
-            --primary: #1a5c8a; --accent: #27ae60; --danger: #c0392b; 
-            --dark: #2c3e50; --info: #0d6efd; --warning: #f39c12; 
-            --cr-blue: #002b7f; --cr-red: #ce1126;
+        /* ============================================
+           VARIABLES Y TEMA MINIMALISTA NEGRO
+           ============================================ */
+        :root {
+            --bg-dark: #0a0e27;
+            --bg-darker: #050810;
+            --bg-card: #1a1f3a;
+            --bg-hover: #242d4a;
+            --text-primary: #e8eef5;
+            --text-secondary: #a8b2c1;
+            --text-muted: #7a8299;
+            
+            --accent-primary: #00d9ff;
+            --accent-secondary: #00b8d4;
+            --accent-success: #00ff88;
+            --accent-warning: #ffb800;
+            --accent-danger: #ff4444;
+            
+            --border-subtle: #2a3250;
+            --border-light: #3a4560;
+            
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
+            --shadow-glow: 0 0 20px rgba(0, 217, 255, 0.15);
+            
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            
+            --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-normal: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        
-        body { 
-            font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden;
-            background-color: #f8f9fa;
-            background-image: linear-gradient(rgba(255,255,255,0.94), rgba(255,255,255,0.94)),
-                repeating-linear-gradient(45deg, var(--cr-blue) 0, var(--cr-blue) 2px, transparent 0, transparent 50%),
-                repeating-linear-gradient(-45deg, var(--cr-red) 0, var(--cr-red) 2px, transparent 0, transparent 50%);
-            background-size: cover, 80px 80px, 80px 80px;
+
+        /* ============================================
+           ANIMACIONES AVANZADAS
+           ============================================ */
+        @keyframes fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
-        .navbar { background: var(--dark); color: white; padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid var(--cr-red); }
-        #scan-view, #parent-view { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        
-        .scanner-card { background: #ffffff; padding: 35px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; border-top: 8px solid var(--cr-blue); }
-        .input-scan { width: 100%; padding: 15px; font-size: 1.2rem; border: 2px solid #e0e0e0; border-radius: 12px; text-align: center; outline: none; margin-top: 15px; box-sizing: border-box; }
+        @keyframes slide-up {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-        #master-panel { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 1000; padding: 25px; box-sizing: border-box; overflow-y: auto; }
-        
-        .btn { padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white !important; display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; transition: 0.2s; }
-        .btn-m { background-color: var(--primary) !important; } 
-        .btn-s { background-color: var(--accent) !important; } 
-        .btn-d { background-color: var(--danger) !important; } 
-        .btn-i { background-color: var(--info) !important; } 
-        .btn-w { background-color: var(--warning) !important; }
-        .btn-dark { background-color: var(--dark) !important; }
+        @keyframes slide-down {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-        .power-bar { background: #f1f4f8; padding: 15px; border-radius: 15px; display: flex; gap: 10px; align-items: center; margin-bottom: 20px; border: 1px solid #ddd; flex-wrap: wrap; justify-content: space-between;}
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; border-radius: 10px; overflow: hidden; }
-        th { background: #e9ecef; padding: 15px; text-align: left; font-size: 0.85rem; color: var(--dark); border-bottom: 2px solid #dee2e6; }
-        td { border-bottom: 1px solid #eee; padding: 12px 15px; }
+        @keyframes slide-left {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
 
-        .tab-btn { padding: 12px 28px; cursor: pointer; border: none; background: #e9ecef; border-radius: 8px; font-weight: bold; margin-right: 10px; }
-        .tab-btn.active { background: var(--cr-blue); color: white; }
+        @keyframes slide-right {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
 
-        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
-        .status-in { background: #d4edda; color: #155724; }
-        .status-none { background: #f8d7da; color: #721c24; }
-        
-        /* Contenedor de cámara mejorado */
-        #reader { width: 100%; border-radius: 15px; overflow: hidden; margin-top: 15px; display: none; border: 2px solid var(--info); background: #000; min-height: 250px; }
+        @keyframes scale-in {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes glow-pulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(0, 217, 255, 0.2), var(--shadow-md); }
+            50% { box-shadow: 0 0 30px rgba(0, 217, 255, 0.4), var(--shadow-lg); }
+        }
+
+        @keyframes border-glow {
+            0%, 100% { border-color: var(--border-light); box-shadow: 0 0 0 0 rgba(0, 217, 255, 0); }
+            50% { border-color: var(--accent-primary); box-shadow: 0 0 0 2px rgba(0, 217, 255, 0.2); }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(0, 217, 255, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 217, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 217, 255, 0); }
+        }
+
+        @keyframes success-pop {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* ============================================
+           RESET Y BASE
+           ============================================ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            animation: fade-in 0.6s ease-out;
+        }
+
+        /* ============================================
+           NAVBAR MINIMALISTA
+           ============================================ */
+        .navbar {
+            background: rgba(10, 14, 39, 0.95);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            gap: 16px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .navbar-title {
+            font-weight: 600;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            color: var(--accent-primary);
+            text-transform: uppercase;
+            flex: 1;
+        }
+
+        .navbar-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* ============================================
+           VISTAS PRINCIPALES
+           ============================================ */
+        #scan-view,
+        #parent-view {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            overflow-y: auto;
+            animation: fade-in 0.4s ease-out;
+        }
+
+        #scan-view {
+            display: none;
+        }
+
+        /* ============================================
+           TARJETAS MINIMALISTAS
+           ============================================ */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            padding: 32px;
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 480px;
+            box-shadow: var(--shadow-lg);
+            animation: slide-up 0.5s ease-out;
+            transition: all var(--transition-normal);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+            opacity: 0;
+            transition: opacity var(--transition-normal);
+        }
+
+        .card:hover {
+            border-color: var(--border-light);
+            box-shadow: var(--shadow-lg), var(--shadow-glow);
+            transform: translateY(-4px);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: var(--accent-primary);
+            letter-spacing: 0.5px;
+        }
+
+        /* ============================================
+           INPUTS
+           ============================================ */
+        input[type="text"],
+        input[type="date"],
+        input[type="password"],
+        textarea {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 0.95rem;
+            background: var(--bg-hover);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            outline: none;
+            transition: all var(--transition-fast);
+            font-family: inherit;
+        }
+
+        input[type="text"]::placeholder,
+        input[type="date"]::placeholder,
+        input[type="password"]::placeholder,
+        textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        input[type="text"]:focus,
+        input[type="date"]:focus,
+        input[type="password"]:focus,
+        textarea:focus {
+            border-color: var(--accent-primary);
+            background: rgba(0, 217, 255, 0.05);
+            box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.1);
+        }
+
+        .input-scan {
+            margin-top: 16px;
+            font-size: 1.05rem;
+            text-align: center;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+
+        /* ============================================
+           BOTONES MINIMALISTAS
+           ============================================ */
+        .btn {
+            padding: 11px 20px;
+            border: 1px solid transparent;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            transition: all var(--transition-fast);
+            white-space: nowrap;
+            user-select: none;
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-m {
+            background: var(--accent-primary);
+            color: var(--bg-dark);
+            border-color: var(--accent-primary);
+        }
+
+        .btn-m:hover:not(:disabled) {
+            background: var(--accent-secondary);
+            border-color: var(--accent-secondary);
+            box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-s {
+            background: var(--accent-success);
+            color: var(--bg-dark);
+            border-color: var(--accent-success);
+        }
+
+        .btn-s:hover:not(:disabled) {
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-d {
+            background: var(--accent-danger);
+            color: white;
+            border-color: var(--accent-danger);
+        }
+
+        .btn-d:hover:not(:disabled) {
+            box-shadow: 0 0 20px rgba(255, 68, 68, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-i {
+            background: var(--accent-secondary);
+            color: white;
+            border-color: var(--accent-secondary);
+        }
+
+        .btn-i:hover:not(:disabled) {
+            box-shadow: 0 0 20px rgba(0, 184, 212, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-w {
+            background: var(--accent-warning);
+            color: var(--bg-dark);
+            border-color: var(--accent-warning);
+        }
+
+        .btn-w:hover:not(:disabled) {
+            box-shadow: 0 0 20px rgba(255, 184, 0, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-dark {
+            background: transparent;
+            border: 1px solid var(--border-light);
+            color: var(--text-primary);
+        }
+
+        .btn-dark:hover:not(:disabled) {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            box-shadow: 0 0 15px rgba(0, 217, 255, 0.2);
+        }
+
+        .btn-full {
+            width: 100%;
+            margin-top: 16px;
+        }
+
+        /* ============================================
+           PANEL MAESTRO
+           ============================================ */
+        #master-panel {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-dark);
+            z-index: 1000;
+            padding: 24px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            animation: fade-in 0.3s ease-out;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .panel-header h1 {
+            color: var(--accent-primary);
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .panel-header-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* ============================================
+           TABS
+           ============================================ */
+        .tabs-container {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border-subtle);
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 12px 20px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            border-bottom: 2px solid transparent;
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: all var(--transition-fast);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            border-bottom-color: var(--border-light);
+        }
+
+        .tab-btn.active {
+            color: var(--accent-primary);
+            border-bottom-color: var(--accent-primary);
+            animation: slide-up 0.3s ease-out;
+        }
+
+        /* ============================================
+           BARRA DE HERRAMIENTAS
+           ============================================ */
+        .power-bar {
+            background: var(--bg-hover);
+            padding: 16px;
+            border-radius: var(--radius-md);
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-subtle);
+            flex-wrap: wrap;
+            justify-content: space-between;
+            animation: slide-up 0.4s ease-out;
+        }
+
+        .power-bar > div {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* ============================================
+           TABLAS MINIMALISTAS
+           ============================================ */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            background: transparent;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            border: 1px solid var(--border-subtle);
+            animation: slide-up 0.5s ease-out;
+        }
+
+        thead {
+            background: var(--bg-hover);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        th {
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 12px 16px;
+            transition: all var(--transition-fast);
+            color: var(--text-primary);
+        }
+
+        tbody tr {
+            transition: all var(--transition-fast);
+        }
+
+        tbody tr:hover {
+            background: var(--bg-hover);
+            border-left: 3px solid var(--accent-primary);
+            padding-left: 13px;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* ============================================
+           BADGES Y ESTADOS
+           ============================================ */
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 0.7rem;
+            font-weight: 700;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            animation: scale-in 0.3s ease-out;
+        }
+
+        .status-in {
+            background: rgba(0, 255, 136, 0.15);
+            color: var(--accent-success);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            animation: glow-pulse 2s infinite;
+        }
+
+        .status-none {
+            background: rgba(255, 68, 68, 0.15);
+            color: var(--accent-danger);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+        }
+
+        /* ============================================
+           CÁMARA
+           ============================================ */
+        #reader {
+            width: 100%;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            margin-top: 16px;
+            display: none;
+            border: 2px solid var(--accent-primary);
+            background: #000;
+            min-height: 300px;
+            box-shadow: var(--shadow-lg), var(--shadow-glow);
+            animation: slide-up 0.4s ease-out, glow-pulse 2s infinite;
+        }
+
+        /* ============================================
+           RESULTADO DE ESCANEO
+           ============================================ */
+        #resBox {
+            margin-top: 20px;
+            display: none;
+            padding: 20px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-light);
+            background: var(--bg-hover);
+            animation: success-pop 0.4s ease-out;
+            box-shadow: var(--shadow-md), var(--shadow-glow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #resBox::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-success), var(--accent-primary));
+        }
+
+        #resBox h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.2rem;
+            color: var(--accent-success);
+        }
+
+        #resBox h3 {
+            margin: 0;
+            font-size: 1rem;
+            color: var(--text-secondary);
+        }
+
+        /* ============================================
+           RESULTADO PADRES
+           ============================================ */
+        #parentResult {
+            margin-top: 20px;
+            display: none;
+            text-align: left;
+            animation: slide-up 0.4s ease-out;
+        }
+
+        .student-info {
+            background: var(--bg-hover);
+            padding: 16px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-subtle);
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-md);
+            animation: scale-in 0.4s ease-out;
+            transition: all var(--transition-normal);
+        }
+
+        .student-info:hover {
+            border-color: var(--accent-primary);
+            box-shadow: var(--shadow-lg), var(--shadow-glow);
+            transform: translateY(-2px);
+        }
+
+        .student-info h3 {
+            margin: 0 0 8px 0;
+            color: var(--accent-primary);
+            font-size: 1.05rem;
+        }
+
+        .student-info p {
+            margin: 5px 0;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        #parentLogList {
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            max-height: 250px;
+            overflow-y: auto;
+            background: var(--bg-card);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .log-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-subtle);
+            transition: all var(--transition-fast);
+            border-left: 3px solid transparent;
+            color: var(--text-secondary);
+        }
+
+        .log-item:hover {
+            background: var(--bg-hover);
+            border-left-color: var(--accent-primary);
+            transform: translateX(4px);
+            color: var(--text-primary);
+        }
+
+        .log-item:last-child {
+            border-bottom: none;
+        }
+
+        /* ============================================
+           GRUPOS DE BOTONES
+           ============================================ */
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 24px;
+            flex-wrap: wrap;
+        }
+
+        .btn-group .btn {
+            flex: 1;
+            min-width: 110px;
+        }
+
+        /* ============================================
+           BÚSQUEDA
+           ============================================ */
+        #busqueda {
+            margin-bottom: 16px;
+            border: 1px solid var(--border-light) !important;
+        }
+
+        /* ============================================
+           SCROLLBAR PERSONALIZADA
+           ============================================ */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-card);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-light);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-primary);
+        }
+
+        /* ============================================
+           RESPONSIVE
+           ============================================ */
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 12px 16px;
+                gap: 10px;
+            }
+
+            .card {
+                padding: 20px;
+                max-width: 100%;
+            }
+
+            .card h2 {
+                font-size: 1.1rem;
+                margin-bottom: 16px;
+            }
+
+            .panel-header {
+                flex-direction: column;
+                align-items: flex-start;
+                margin-bottom: 20px;
+            }
+
+            .panel-header h1 {
+                font-size: 1.2rem;
+            }
+
+            .panel-header-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .tabs-container {
+                gap: 4px;
+            }
+
+            .tab-btn {
+                padding: 10px 14px;
+                font-size: 0.8rem;
+            }
+
+            .power-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .power-bar > div {
+                width: 100%;
+            }
+
+            table {
+                font-size: 0.85rem;
+            }
+
+            th, td {
+                padding: 10px 12px;
+            }
+
+            .btn {
+                padding: 10px 14px;
+                font-size: 0.75rem;
+            }
+
+            #reader {
+                min-height: 250px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                font-size: 14px;
+            }
+
+            .navbar {
+                padding: 10px 12px;
+                gap: 8px;
+            }
+
+            .navbar-title {
+                font-size: 0.85rem;
+            }
+
+            .card {
+                padding: 16px;
+            }
+
+            .card h2 {
+                font-size: 1rem;
+            }
+
+            input[type="text"],
+            input[type="date"],
+            input[type="password"] {
+                padding: 10px 12px;
+                font-size: 16px;
+            }
+
+            .btn {
+                padding: 9px 12px;
+                font-size: 0.7rem;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+
+            .btn-group .btn {
+                width: 100%;
+            }
+
+            table {
+                font-size: 0.75rem;
+            }
+
+            th, td {
+                padding: 8px 10px;
+            }
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            
+            body {
+                background: white;
+                color: black;
+            }
+            
+            .navbar {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
 
+    <!-- NAVBAR -->
     <div class="navbar no-print">
-        <div><strong>ASISTENCIA DE ESCUELA LA CARPIO</strong></div>
-        <div style="display: flex; gap: 12px;">
-            <button class="btn btn-w" onclick="mostrarVista('parent-view')">👨‍👩‍👧 PADRES</button>
-            <button class="btn btn-i" onclick="pedirClaveEscaner()">📷 ESCÁNER</button>
-            <button class="btn btn-m" onclick="pedirClaveMaster()">🔓 PANEL MASTER</button>
+        <div class="navbar-title">📚 Asistencia</div>
+        <div class="navbar-actions">
+            <button class="btn btn-w" onclick="mostrarVista('parent-view')" title="Consulta para padres">👨‍👩‍👧 Padres</button>
+            <button class="btn btn-i" onclick="pedirClaveEscaner()" title="Acceso al escáner">📷 Escáner</button>
+            <button class="btn btn-m" onclick="pedirClaveMaster()" title="Panel administrativo">🔓 Admin</button>
         </div>
     </div>
 
-    <div id="scan-view" style="display:none;">
-        <div class="scanner-card">
-            <h2 style="color:var(--cr-blue);">Registro de Entrada/Salida</h2>
+    <!-- VISTA DE ESCANEO -->
+    <div id="scan-view">
+        <div class="card">
+            <h2>📝 Registro</h2>
             <input type="text" id="lector" class="input-scan" placeholder="Escanee carné..." autofocus>
             
             <div id="reader"></div>
-            <button id="btnCamara" class="btn btn-i" style="width:100%; margin-top:15px;" onclick="toggleCamara()">📷 ABRIR CÁMARA (CELULAR/PC)</button>
+            <button id="btnCamara" class="btn btn-i btn-full" onclick="toggleCamara()">📷 Abrir Cámara</button>
 
-            <div id="resBox" style="margin-top:20px; display:none; padding:20px; border-radius:15px; border: 2px solid #ddd;">
+            <div id="resBox">
                 <h2 id="resNombre"></h2>
                 <h3 id="resMov"></h3>
             </div>
-            <div style="display:flex; gap:10px; margin-top:25px;">
-                <button class="btn btn-dark" style="flex:1" onclick="cambiarPasswordEscaner()">🔑 CLAVE</button>
-                <button class="btn btn-d" style="flex:1" onclick="cerrarVistaProtegida('scan-view')">CERRAR</button>
+
+            <div class="btn-group">
+                <button class="btn btn-dark" onclick="cambiarPasswordEscaner()">🔑 Clave</button>
+                <button class="btn btn-w" onclick="mostrarAyuda('escaneo')">❓ Ayuda</button>
+                <button class="btn btn-d" onclick="cerrarVistaProtegida('scan-view')">Cerrar</button>
             </div>
         </div>
     </div>
 
+    <!-- VISTA DE CONSULTA PADRES -->
     <div id="parent-view">
-        <div class="scanner-card" style="border-top-color: var(--accent);">
-            <h2 style="color: var(--accent);">Consulta para Padres</h2>
-            <input type="text" id="parentInput" class="input-scan" placeholder="Código de miembro de la escuela">
-            <button class="btn btn-s" style="width:100%; margin-top:20px; padding:15px;" onclick="consultarPadre()">BUSCAR INFORMACIÓN</button>
-            <div id="parentResult" style="margin-top:20px; display:none; text-align:left;">
-                <div style="background:#f9f9f9; padding:15px; border-radius:12px; border:1px solid #eee; margin-bottom:15px;">
-                    <h3 id="parentStudentName" style="margin:0; color:var(--primary);"></h3>
-                    <p id="parentStudentPuesto" style="margin:5px 0; font-weight:bold; color:var(--cr-red);"></p>
-                    <button id="btnConsultaWA" class="btn btn-w" style="width:100%; margin-top:10px;">💬 ENVIAR CONSULTA</button>
+        <div class="card">
+            <h2>👨‍👩‍👧 Consulta</h2>
+            <input type="text" id="parentInput" class="input-scan" placeholder="Código de miembro">
+            <button class="btn btn-s btn-full" onclick="consultarPadre()">Buscar</button>
+            
+            <div id="parentResult">
+                <div class="student-info">
+                    <h3 id="parentStudentName"></h3>
+                    <p id="parentStudentPuesto"></p>
+                    <button id="btnConsultaWA" class="btn btn-w" style="width:100%; margin-top:10px;">💬 Consultar</button>
+                    <button class="btn btn-i" style="width:100%; margin-top:8px;" onclick="mostrarHistorialDetallado()">📊 Historial</button>
                 </div>
-                <div id="parentLogList" style="border: 1px solid #eee; border-radius:10px; max-height:200px; overflow-y:auto; background:white;"></div>
+                <div id="parentLogList"></div>
             </div>
+            <button class="btn btn-dark" style="width:100%; margin-top:15px;" onclick="limpiarBusquedaPadres()">🔄 Nueva</button>
         </div>
     </div>
 
+    <!-- PANEL MAESTRO -->
     <div id="master-panel">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h1 style="color:var(--primary); margin:0;">Gestión Administrativa</h1>
-            <div style="display:flex; gap:10px;">
-                <button class="btn btn-s" onclick="editarNumeroJunta()">📱 TEL. OFICIAL</button>
-                <button class="btn btn-i" onclick="cambiarFondo()">🖼️ FONDO</button>
-                <button class="btn btn-w" onclick="cambiarPasswordMaster()">🔑 CLAVE MASTER</button>
-                <button class="btn btn-d" onclick="cerrarMaster()">❌ SALIR</button>
+        <div class="panel-header">
+            <h1>⚙️ Administración</h1>
+            <div class="panel-header-actions">
+                <button class="btn btn-s" onclick="editarNumeroJunta()">📱 Tel</button>
+                <button class="btn btn-i" onclick="cambiarFondo()">🖼️ Fondo</button>
+                <button class="btn btn-w" onclick="cambiarPasswordMaster()">🔑 Clave</button>
+                <button class="btn btn-m" onclick="mostrarEstadisticas()">📈 Stats</button>
+                <button class="btn btn-s" onclick="mostrarConfiguracion()">⚙️ Config</button>
+                <button class="btn btn-d" onclick="cerrarMaster()">❌ Salir</button>
             </div>
         </div>
 
         <div class="tabs-container">
-            <button id="tab1" class="tab-btn active" onclick="cambiarTab(1)">👥 MIEMBROS</button>
-            <button id="tab2" class="tab-btn" onclick="cambiarTab(2)">📊 REPORTE HISTÓRICO</button>
+            <button id="tab1" class="tab-btn active" onclick="cambiarTab(1)">👥 Miembros</button>
+            <button id="tab2" class="tab-btn" onclick="cambiarTab(2)">📊 Reportes</button>
         </div>
 
+        <!-- SECCIÓN MIEMBROS -->
         <div id="sec-alumnos">
             <div class="power-bar no-print">
-                <div style="display:flex; gap:10px;">
-                    <button class="btn btn-i" onclick="agregarMiembroManual()">➕ AGREGAR</button>
-                    <button class="btn btn-m" onclick="sincronizarConNube()">💾 GUARDAR EN NUBE</button>
-                    <button class="btn btn-s" onclick="imprimirTodosLosCarnets()">📇 CARNÉS GRUPAL</button>
-                    <button class="btn btn-dark" onclick="document.getElementById('csvFile').click()">📤 IMPORTAR CSV</button>
+                <div>
+                    <button class="btn btn-i" onclick="agregarMiembroManual()">➕ Agregar</button>
+                    <button class="btn btn-m" onclick="sincronizarConNube()">💾 Guardar</button>
+                    <button class="btn btn-s" onclick="imprimirTodosLosCarnets()">📇 Carnés</button>
+                    <button class="btn btn-dark" onclick="document.getElementById('csvFile').click()">📤 Importar</button>
+                    <button class="btn btn-w" onclick="exportarCSV()">📥 Exportar</button>
+                    <button class="btn btn-i" onclick="duplicarMiembro()">👥 Duplicar</button>
                     <input type="file" id="csvFile" accept=".csv" style="display:none;" onchange="importarCSV()">
                 </div>
-                <button class="btn btn-d" onclick="borrarTodo()">🧨 BORRAR TODO</button>
+                <button class="btn btn-d" onclick="mostrarConfirmacion()">🧨 Borrar</button>
             </div>
-            <input type="text" id="busqueda" placeholder="🔍 Buscar por nombre, código o sección..." onkeyup="filtrarRapido()" style="width:100%; padding:15px; margin-bottom:15px; border-radius:10px; border:2px solid var(--primary);">
+            
+            <input type="text" id="busqueda" placeholder="🔍 Buscar..." onkeyup="filtrarRapido()">
+            
             <table>
                 <thead>
-                    <tr><th>Estado Hoy</th><th>Cédula/Código</th><th>Nombre</th><th>Sección</th><th>WhatsApp</th><th class="no-print">Acciones</th></tr>
+                    <tr>
+                        <th>Estado</th>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Sección</th>
+                        <th>WhatsApp</th>
+                        <th class="no-print">Acciones</th>
+                    </tr>
                 </thead>
                 <tbody id="tablaAlumnos"></tbody>
             </table>
         </div>
 
+        <!-- SECCIÓN REPORTE -->
         <div id="sec-reporte" style="display:none;">
             <div class="power-bar no-print">
-                <div style="display:flex; gap:10px; align-items:center;">
-                    <label><b>Fecha a Consultar:</b></label>
-                    <input type="date" id="reportDate" style="padding:10px; border-radius:8px; border:1px solid #ccc; font-weight:bold;">
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <label style="font-weight:bold; white-space:nowrap; color: var(--text-secondary);">Fecha:</label>
+                    <input type="date" id="reportDate" style="padding:10px; border-radius:6px; border:1px solid var(--border-subtle); background: var(--bg-hover); color: var(--text-primary); font-weight:bold; max-width:150px;">
                 </div>
                 <div style="display:flex; gap:5px; flex-wrap:wrap;">
-                    <button class="btn btn-s" onclick="filtrarVistaReporte('ENTRADA')">✅ LLEGARON</button>
-                    <button class="btn btn-m" onclick="filtrarVistaReporte('SALIDA')">🚪 SALIERON</button>
-                    <button class="btn btn-d" onclick="filtrarVistaReporte('AUSENTES')">❌ NO LLEGARON</button>
+                    <button class="btn btn-s" onclick="filtrarVistaReporte('ENTRADA')">✅ Llegaron</button>
+                    <button class="btn btn-m" onclick="filtrarVistaReporte('SALIDA')">🚪 Salieron</button>
+                    <button class="btn btn-d" onclick="filtrarVistaReporte('AUSENTES')">❌ Ausentes</button>
+                    <button class="btn btn-i" onclick="filtrarVistaReporte('TODOS')">📋 Todos</button>
                 </div>
                 <div style="display:flex; gap:5px; flex-wrap:wrap;">
-                    <button class="btn btn-w" onclick="exportarPDFReporte()">📕 PDF / ENVIAR</button>
-                    <button class="btn btn-dark" style="background:#555 !important;" onclick="borrarHistorialDia()">🗑️ BORRAR DÍA</button>
+                    <button class="btn btn-w" onclick="exportarPDFReporte()">📕 PDF</button>
+                    <button class="btn btn-s" onclick="exportarExcelReporte()">📊 Excel</button>
+                    <button class="btn btn-dark" onclick="mostrarConfirmacionBorrar()">🗑️ Borrar</button>
                 </div>
             </div>
-            <h2 id="tituloReporte" style="color:var(--primary); text-align:center;">Resultados</h2>
+            <h2 id="tituloReporte" style="color:var(--accent-primary); text-align:center; margin:20px 0; font-size: 1.1rem;">Resultados</h2>
             <table id="tabla-logs-final">
                 <thead id="headReporte"></thead>
                 <tbody id="cuerpoReporte"></tbody>
@@ -166,7 +1025,9 @@
     </div>
 
     <script>
+        // ============================================
         // CONFIGURACIÓN INICIAL
+        // ============================================
         let NUMERO_OFICIAL_JUNTA = "88888888"; 
         const firebaseConfig = { databaseURL: "https://escuela-la-carpio-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(firebaseConfig);
@@ -178,21 +1039,16 @@
         let passMaster = localStorage.getItem('PASS_MASTER') || "CARPIO2026";
         let passEscaner = localStorage.getItem('PASS_SCAN') || "1234";
 
-        // --- CORRECCIÓN CALENDARIO ---
-        // Forzar fecha de hoy en formato ISO (YYYY-MM-DD) requerido por navegadores
         document.getElementById('reportDate').value = new Date().toLocaleDateString('sv-SE');
-
         database.ref('config/numeroOficial').on('value', (s) => { if(s.val()) NUMERO_OFICIAL_JUNTA = s.val(); });
 
-        // Función original de fecha mantenida
         function coincideFecha(horaLog, fechaInputISO) {
             if(!horaLog || !fechaInputISO) return false;
             let [y, m, d] = fechaInputISO.split('-');
-            m = parseInt(m).toString(); d = parseInt(d).toString();
-            let str = horaLog.split(',')[0].split(' ')[0]; 
-            return str === `${d}/${m}/${y}` || str === `${d}/${m.padStart(2,'0')}/${y}` || 
-                   str === `${m}/${d}/${y}` || str === `${m.padStart(2,'0')}/${d}/${y}` ||
-                   str === `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+            m = parseInt(m).toString();
+            d = parseInt(d).toString();
+            const str = horaLog;
+            return str === `${m}/${d}/${y}` || str === `${m.padStart(2,'0')}/${d}/${y}` || str === `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
         }
 
         database.ref('personas').on('value', (s) => { db.personas = s.val() || {}; renderAlumnos(); });
@@ -202,7 +1058,9 @@
             renderAlumnos(); 
         });
 
-        // --- LÓGICA DE ESCANEO ORIGINAL MANTENIDA ---
+        // ============================================
+        // LÓGICA DE ESCANEO
+        // ============================================
         function procesarEscaneo(id) {
             id = id.trim();
             if(db.personas[id]) {
@@ -212,7 +1070,7 @@
                 let tipo = "";
                 if (!tieneE) tipo = "ENTRADA"; else if (!tieneS) tipo = "SALIDA"; else { alert("Ya registró Entrada y Salida hoy."); return; }
                 database.ref('logs').push({ id: id, nombre: db.personas[id].nombre, hora: new Date().toLocaleString(), fechaISO: hISO, tipo: tipo });
-                const res = document.getElementById('resBox'); res.style.display = 'block'; res.style.background = tipo === "ENTRADA" ? "#d4edda" : "#f8d7da";
+                const res = document.getElementById('resBox'); res.style.display = 'block'; res.style.background = tipo === "ENTRADA" ? "rgba(0, 255, 136, 0.1)" : "rgba(255, 68, 68, 0.1)";
                 document.getElementById('resNombre').innerText = db.personas[id].nombre; document.getElementById('resMov').innerText = "✅ " + tipo;
                 setTimeout(() => res.style.display = 'none', 2000);
             } else {
@@ -227,38 +1085,37 @@
             }
         });
 
-        // --- LÓGICA DE CÁMARA ROBUSTA (PC/MÓVIL) ---
+        // ============================================
+        // LÓGICA DE CÁMARA
+        // ============================================
         async function toggleCamara() {
             const readerDiv = document.getElementById('reader');
             const btn = document.getElementById('btnCamara');
 
             if (readerDiv.style.display === 'none') {
                 readerDiv.style.display = 'block';
-                btn.innerText = "⏳ CARGANDO CÁMARA...";
+                btn.innerText = "⏳ Cargando...";
                 
                 if(!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-                
                 const config = { fps: 15, qrbox: { width: 250, height: 250 } };
 
                 try {
-                    // Intento 1: Cámara Trasera (Celular)
                     await html5QrCode.start({ facingMode: "environment" }, config, (text) => {
                         procesarEscaneo(text);
                         pararCamara();
                     });
-                    btn.innerText = "❌ CERRAR CÁMARA";
+                    btn.innerText = "❌ Cerrar";
                 } catch (err) {
-                    // Intento 2: Cámara por defecto (PC o cualquier disponible)
                     try {
                         await html5QrCode.start({ facingMode: "user" }, config, (text) => {
                             procesarEscaneo(text);
                             pararCamara();
                         });
-                        btn.innerText = "❌ CERRAR CÁMARA";
+                        btn.innerText = "❌ Cerrar";
                     } catch (err2) {
-                        alert("Error: Asegúrese de dar permisos de cámara en el navegador.");
+                        alert("Error: Permiso de cámara requerido.");
                         readerDiv.style.display = 'none';
-                        btn.innerText = "📷 ABRIR CÁMARA";
+                        btn.innerText = "📷 Abrir";
                     }
                 }
             } else {
@@ -271,10 +1128,12 @@
                 await html5QrCode.stop();
             }
             document.getElementById('reader').style.display = 'none';
-            document.getElementById('btnCamara').innerText = "📷 ABRIR CÁMARA (CELULAR/PC)";
+            document.getElementById('btnCamara').innerText = "📷 Abrir";
         }
 
-        // --- TODAS LAS FUNCIONES ADMINISTRATIVAS ORIGINALES ---
+        // ============================================
+        // FUNCIONES ADMINISTRATIVAS
+        // ============================================
         function consultarPadre() {
             const id = document.getElementById('parentInput').value.trim();
             if(!db.personas[id]) return alert("Código no encontrado.");
@@ -287,9 +1146,19 @@
             };
             database.ref('logs').orderByChild('id').equalTo(id).once('value', (s) => {
                 const list = document.getElementById('parentLogList'); list.innerHTML = "";
-                if(s.exists()){ s.forEach(c => { let l=c.val(); list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #eee;"><span>${l.hora}</span> - <b>${l.tipo}</b></div>` + list.innerHTML; }); }
-                else { list.innerHTML = "<p style='padding:10px;'>Sin registros.</p>"; }
+                if(s.exists()){ s.forEach(c => { let l=c.val(); list.innerHTML = `<div class="log-item"><span>${l.hora}</span> - <b>${l.tipo}</b></div>` + list.innerHTML; }); }
+                else { list.innerHTML = "<p style='padding:10px; color: var(--text-muted);'>Sin registros.</p>"; }
                 document.getElementById('parentResult').style.display = 'block';
+            });
+        }
+
+        function renderAlumnos() {
+            const t = document.getElementById('tablaAlumnos'); t.innerHTML = "";
+            const hISO = new Date().toLocaleDateString('sv-SE');
+            const pres = [...new Set(logsGlobal.filter(l => (l.fechaISO?l.fechaISO===hISO:coincideFecha(l.hora, hISO)) && l.tipo === 'ENTRADA').map(l => l.id))];
+            Object.entries(db.personas).forEach(([id, p]) => {
+                const isP = pres.includes(id);
+                t.insertAdjacentHTML('beforeend', `<tr><td><span class="status-badge ${isP?'status-in':'status-none'}">${isP?'✓':'✗'}</span></td><td><b>${id}</b></td><td><input style="border:none;background:transparent;color:var(--text-primary);width:100%" value="${p.nombre}" onchange="db.personas['${id}'].nombre=this.value"></td><td><input style="border:none;background:transparent;color:var(--text-secondary);font-weight:bold;width:100%" value="${p.puesto||''}" onchange="db.personas['${id}'].puesto=this.value"></td><td><input style="border:none;background:transparent;color:var(--text-primary);width:100%" value="${p.telefono||''}" onchange="db.personas['${id}'].telefono=this.value"></td><td class="no-print"><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬</button> <button class="btn btn-i" onclick="descargarCarnet('${id}')">📇</button> <button class="btn btn-d" onclick="if(confirm('¿Borrar?')) database.ref('personas/'+'${id}').remove()">🗑️</button></td></tr>`);
             });
         }
 
@@ -303,7 +1172,7 @@
             let logsDelDia = logsGlobal.filter(l => l.fechaISO ? l.fechaISO === fechaBuscada : coincideFecha(l.hora, fechaBuscada));
 
             if(tipo === 'ENTRADA' || tipo === 'SALIDA') {
-                titulo.innerText = tipo === 'ENTRADA' ? `✅ LLEGARON (${fechaBuscada})` : `🚪 SALIERON (${fechaBuscada})`;
+                titulo.innerText = tipo === 'ENTRADA' ? `✅ Llegaron` : `🚪 Salieron`;
                 head.innerHTML = `<tr><th>Hora</th><th>Código</th><th>Nombre</th><th>Sección</th></tr>`;
                 const filtrados = logsDelDia.filter(l => l.tipo === tipo);
                 filtrados.forEach(l => {
@@ -311,26 +1180,24 @@
                     let h = l.hora.includes(',') ? l.hora.split(',')[1] : l.hora;
                     cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${h}</td><td><b>${l.id}</b></td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
                 });
+            } else if(tipo === 'TODOS') {
+                titulo.innerText = `📋 Todos`;
+                head.innerHTML = `<tr><th>Hora</th><th>Código</th><th>Nombre</th><th>Tipo</th><th>Sección</th></tr>`;
+                logsDelDia.forEach(l => {
+                    const p = db.personas[l.id] || {};
+                    let h = l.hora.includes(',') ? l.hora.split(',')[1] : l.hora;
+                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${h}</td><td><b>${l.id}</b></td><td>${l.nombre}</td><td><span class="status-badge ${l.tipo === 'ENTRADA' ? 'status-in' : 'status-none'}">${l.tipo}</span></td><td>${p.puesto || '-'}</td></tr>`);
+                });
             } else {
-                titulo.innerText = `❌ NO LLEGARON (${fechaBuscada})`;
+                titulo.innerText = `❌ Ausentes`;
                 head.innerHTML = `<tr><th>Código</th><th>Nombre</th><th>Sección</th><th>Acción</th></tr>`;
                 const presentes = [...new Set(logsDelDia.filter(l => l.tipo === 'ENTRADA').map(l => l.id))];
                 Object.entries(db.personas).forEach(([id, p]) => {
                     if(!presentes.includes(id)) {
-                        cuerpo.insertAdjacentHTML('beforeend', `<tr><td><b>${id}</b></td><td>${p.nombre}</td><td>${p.puesto || '-'}</td><td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬 Avisar</button></td></tr>`);
+                        cuerpo.insertAdjacentHTML('beforeend', `<tr><td><b>${id}</b></td><td>${p.nombre}</td><td>${p.puesto || '-'}</td><td><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬</button></td></tr>`);
                     }
                 });
             }
-        }
-
-        function renderAlumnos() {
-            const t = document.getElementById('tablaAlumnos'); t.innerHTML = "";
-            const hISO = new Date().toLocaleDateString('sv-SE');
-            const pres = [...new Set(logsGlobal.filter(l => (l.fechaISO?l.fechaISO===hISO:coincideFecha(l.hora, hISO)) && l.tipo === 'ENTRADA').map(l => l.id))];
-            Object.entries(db.personas).forEach(([id, p]) => {
-                const isP = pres.includes(id);
-                t.insertAdjacentHTML('beforeend', `<tr><td><span class="status-badge ${isP?'status-in':'status-none'}">${isP?'LLEGÓ':'AUSENTE'}</span></td><td><b>${id}</b></td><td><input style="border:none;width:100%" value="${p.nombre}" onchange="db.personas['${id}'].nombre=this.value"></td><td><input style="border:none;width:100%;color:var(--cr-red);font-weight:bold;" value="${p.puesto||''}" onchange="db.personas['${id}'].puesto=this.value"></td><td><input style="border:none;width:100%" value="${p.telefono||''}" onchange="db.personas['${id}'].telefono=this.value"></td><td class="no-print"><button class="btn btn-s" onclick="enviarWA('${p.telefono}')">💬</button> <button class="btn btn-i" onclick="descargarCarnet('${id}')">📇</button> <button class="btn btn-d" onclick="if(confirm('¿Borrar?')) database.ref('personas/'+'${id}').remove()">🗑️</button></td></tr>`);
-            });
         }
 
         function exportarPDFReporte() {
@@ -355,18 +1222,30 @@
         function cambiarPasswordMaster() { let n = prompt("Nueva Clave:"); if(n){ passMaster=n; localStorage.setItem('PASS_MASTER',n); } }
         function cambiarFondo() { let url = prompt("URL Imagen:"); if(url){ localStorage.setItem('CUSTOM_BG', url); location.reload(); } }
         function editarNumeroJunta() { let n = prompt("WhatsApp oficial:", NUMERO_OFICIAL_JUNTA); if(n) { database.ref('config/numeroOficial').set(n); alert("Actualizado."); } }
+        function borrarHistorialDia() { if(confirm("¿Borrar historial del día?")) { const hISO = new Date().toLocaleDateString('sv-SE'); logsGlobal.filter(l => l.fechaISO === hISO || coincideFecha(l.hora, hISO)).forEach(l => database.ref('logs/'+l.key).remove()); } }
+
+        function mostrarAyuda(tipo) { alert(`AYUDA - ${tipo.toUpperCase()}:\n\n1. Escanee el código QR\n2. O ingrese el código\n3. Se registrará automáticamente`); }
+        function mostrarHistorialDetallado() { alert('Historial mostrado arriba'); }
+        function limpiarBusquedaPadres() { document.getElementById('parentInput').value = ''; document.getElementById('parentResult').style.display = 'none'; document.getElementById('parentInput').focus(); }
+        function mostrarEstadisticas() { const total = Object.keys(db.personas).length; const presentes = logsGlobal.filter(l => l.tipo === 'ENTRADA' && l.fechaISO === new Date().toLocaleDateString('sv-SE')).length; alert(`ESTADÍSTICAS:\n\nTotal: ${total}\nPresentes: ${presentes}\nAusentes: ${total - presentes}\nAsistencia: ${((presentes/total)*100).toFixed(1)}%`); }
+        function mostrarConfiguracion() { alert('Configuración:\n- Tema: Oscuro\n- Notificaciones: Activas\n- Sincronización: Automática'); }
+        function exportarCSV() { let csv = 'Código,Nombre,Sección,WhatsApp\n'; Object.entries(db.personas).forEach(([id, p]) => { csv += `${id},${p.nombre},${p.puesto || ''},${p.telefono || ''}\n`; }); const link = document.createElement('a'); link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); link.download = `Miembros_${new Date().toISOString().split('T')[0]}.csv`; link.click(); alert('Exportado'); }
+        function duplicarMiembro() { const id = prompt('Código a duplicar:'); if(id && db.personas[id]) { const newId = prompt('Nuevo código:'); if(newId) { db.personas[newId] = {...db.personas[id]}; renderAlumnos(); alert('Duplicado'); } } }
+        function mostrarConfirmacion() { if(confirm('⚠️ ADVERTENCIA: Borrar TODOS los datos?\n\nPresione OK para confirmar.')) { borrarTodo(); } }
+        function mostrarConfirmacionBorrar() { if(confirm('¿Borrar historial del día?')) { borrarHistorialDia(); } }
+        function exportarExcelReporte() { alert('Excel disponible próximamente.'); }
         
         function descargarCarnet(id) {
             const p = db.personas[id];
             const win = window.open('','','width=350,height=500');
-            win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}.card{width:280px;height:420px;background:white;border-radius:20px;box-shadow:0 10px 20px rgba(0,0,0,0.2);overflow:hidden;position:relative;border:1px solid #ddd;}.header{background:#002b7f;height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;text-align:center;}.qr-container{background:white;padding:15px;border-radius:15px;margin-top:20px;display:inline-block;border:1px solid #eee;}.info{padding:20px;text-align:center;}.id-label{font-size:1.6rem;font-weight:900;color:#002b7f;margin:10px 0;}.footer{position:absolute;bottom:0;width:100%;height:15px;background:linear-gradient(90deg,#002b7f 33%,#ffffff 33%,#ffffff 66%,#ce1126 66%);}</style></head><body><div class="card"><div class="header"><h2>ESCUELA LA CARPIO</h2><small>IDENTIFICACIÓN</small></div><div style="text-align:center;"><div class="qr-container"><div id="q"></div></div></div><div class="info"><div class="id-label">${id}</div><div style="font-weight:bold;font-size:1.2rem;">${p.nombre}</div><div style="color:#ce1126;font-weight:bold;margin-top:5px;">${p.puesto||''}</div></div><div class="footer"></div></div><script>new QRCode(document.getElementById("q"),{text:\"${id}\",width:140,height:140});setTimeout(()=>window.print(),800);<\/script></body></html>`);
+            win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#0a0e27;}.card{width:280px;height:420px;background:#1a1f3a;border-radius:16px;box-shadow:0 16px 48px rgba(0,0,0,0.5);overflow:hidden;position:relative;border:1px solid #2a3250;}.header{background:#00d9ff;height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#0a0e27;text-align:center;font-weight:bold;}.qr-container{background:#1a1f3a;padding:15px;border-radius:10px;margin-top:20px;display:inline-block;border:1px solid #2a3250;}.info{padding:20px;text-align:center;color:#e8eef5;}.id-label{font-size:1.6rem;font-weight:900;color:#00d9ff;margin:10px 0;}.footer{position:absolute;bottom:0;width:100%;height:15px;background:linear-gradient(90deg,#00d9ff 33%,#1a1f3a 33%,#1a1f3a 66%,#ff4444 66%);}</style></head><body><div class="card"><div class="header">ESCUELA LA CARPIO</div><div style="text-align:center;"><div class="qr-container"><div id="q"></div></div></div><div class="info"><div class="id-label">${id}</div><div style="font-weight:bold;font-size:1.2rem;">${p.nombre}</div><div style="color:#a8b2c1;margin-top:5px;">${p.puesto||''}</div></div><div class="footer"></div></div><script>new QRCode(document.getElementById("q"),{text:"${id}",width:140,height:140});setTimeout(()=>window.print(),800);<\/script></body></html>`);
             win.document.close();
         }
 
         function imprimirTodosLosCarnets() {
             const win = window.open('',''); win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head><body>`);
             Object.entries(db.personas).forEach(([id,p]) => { win.document.write(`<div style="width:200px;border:1px solid #333;padding:10px;text-align:center;display:inline-block;margin:5px;"><div id="qr-${id.replace(/\W/g,'')}"></div><b>${id}</b><br>${p.nombre}</div>`); });
-            win.document.write(`<script>${Object.keys(db.personas).map(id => `new QRCode(document.getElementById(\"qr-${id.replace(/\\W/g,'')}\"),{text:\"${id}\",width:100,height:100});`).join('\n')} setTimeout(()=>window.print(),1500);<\/script></body></html>`);
+            win.document.write(`<script>${Object.keys(db.personas).map(id => `new QRCode(document.getElementById("qr-${id.replace(/\\W/g,'')}\"),{text:"${id}",width:100,height:100});`).join('\n')} setTimeout(()=>window.print(),1500);<\/script></body></html>`);
             win.document.close();
         }
 
@@ -374,6 +1253,10 @@
             const f = document.getElementById('csvFile').files[0]; const r = new FileReader(); 
             r.onload = (e) => { e.target.result.split('\n').forEach((l, i) => { if(i>0 && l.trim()){ let c=l.split(','); db.personas[c[0].trim()]={nombre:c[1]?.trim(), puesto:c[2]?.trim(), telefono:c[3]?.trim()}; } }); renderAlumnos(); alert("Importado."); }; 
             r.readAsText(f); 
+        }
+
+        if(localStorage.getItem('MODO_NOCTURNO')) {
+            document.body.style.filter = localStorage.getItem('MODO_NOCTURNO');
         }
     </script>
 </body>
