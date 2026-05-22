@@ -7,12 +7,15 @@
     <meta name="description" content="Sistema de asistencia con IA - Escuela La Carpio">
     <title>Asistencia Facial - Escuela La Carpio</title>
     
-    <!-- Firebase (Usando versión 8 por compatibilidad con el código base, pero con tus credenciales) -->
+    <!-- Firebase (Usando versión 8 por compatibilidad con el código base) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     
     <!-- Face-API.js (Reconocimiento Facial) -->
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    
+    <!-- QR Code (Para generación de carnés) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <!-- PDF Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -83,6 +86,9 @@
             line-height: 1.6;
             color: var(--text-primary);
             background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
             display: flex;
             flex-direction: column;
             height: 100vh;
@@ -202,20 +208,24 @@
         }
 
         /* ============================================
-           PANEL MAESTRO Y TABLAS (Manteniendo diseño base)
+           PANEL MAESTRO Y TABLAS
            ============================================ */
         #master-panel {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg-dark); z-index: 1000; padding: 24px; box-sizing: border-box;
-            overflow-y: auto; border: 1px solid var(--border-subtle);
+            background: rgba(10, 14, 39, 0.95); z-index: 1000; padding: 24px; box-sizing: border-box;
+            overflow-y: auto; border: 1px solid var(--border-subtle); backdrop-filter: blur(10px);
         }
         .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 20px; }
         .panel-header h1 { color: var(--accent-primary); margin: 0; font-size: 1.5rem; flex: 1; }
+        
+        .panel-header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        
         .tabs-container { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border-subtle); }
         .tab-btn { padding: 12px 20px; cursor: pointer; border: none; background: transparent; border-bottom: 2px solid transparent; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; }
         .tab-btn.active { color: var(--accent-primary); border-bottom-color: var(--accent-primary); }
         
-        .power-bar { background: var(--bg-hover); padding: 16px; border-radius: var(--radius-md); display: flex; gap: 12px; margin-bottom: 20px; border: 1px solid var(--border-subtle); flex-wrap: wrap; justify-content: space-between; }
+        .power-bar { background: var(--bg-hover); padding: 16px; border-radius: var(--radius-md); display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; border: 1px solid var(--border-subtle); }
+        .power-bar-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 12px; background: transparent; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-subtle); }
         thead { background: var(--bg-hover); border-bottom: 1px solid var(--border-light); }
@@ -281,7 +291,7 @@
         </div>
     </div>
 
-    <!-- VISTA DE CONSULTA PADRES (Sin cambios lógicos profundos) -->
+    <!-- VISTA DE CONSULTA PADRES -->
     <div id="parent-view">
         <div class="card">
             <h2>👨‍👩‍👧 Consulta</h2>
@@ -303,37 +313,48 @@
     <!-- PANEL MAESTRO -->
     <div id="master-panel">
         <div class="panel-header">
-            <h1>⚙️ Administración IA</h1>
-            <div class="panel-header-actions" style="display:flex; gap:8px;">
-                <button class="btn btn-s" onclick="editarNumeroJunta()">📱 Tel</button>
-                <button class="btn btn-d" onclick="cerrarMaster()">❌ Salir</button>
+            <h1>⚙️ Administración</h1>
+            <div class="panel-header-actions">
+                <button class="btn btn-s" onclick="editarNumeroJunta()">📱 TEL</button>
+                <button class="btn btn-i" onclick="cambiarFondo()">🖼️ FONDO</button>
+                <button class="btn btn-w" onclick="cambiarPasswordMaster()">🔑 CLAVE</button>
+                <button class="btn btn-m" onclick="mostrarEstadisticas()">📈 STATS</button>
+                <button class="btn btn-s" onclick="mostrarConfiguracion()">⚙️ CONFIG</button>
+                <button class="btn btn-d" onclick="cerrarMaster()">❌ SALIR</button>
             </div>
         </div>
 
         <div class="tabs-container">
-            <button id="tab1" class="tab-btn active" onclick="cambiarTab(1)">👥 Miembros y Rostros</button>
+            <button id="tab1" class="tab-btn active" onclick="cambiarTab(1)">👥 Miembros</button>
             <button id="tab2" class="tab-btn" onclick="cambiarTab(2)">📊 Reportes</button>
         </div>
 
         <!-- SECCIÓN MIEMBROS -->
         <div id="sec-alumnos">
             <div class="power-bar no-print">
-                <div>
-                    <button class="btn btn-i" onclick="agregarMiembroManual()">➕ Nuevo Estudiante</button>
-                    <button class="btn btn-m" onclick="sincronizarConNube()">💾 Guardar Cambios</button>
-                    <span id="admin-ai-status" class="ai-status" style="margin-left: 15px; display:inline-block;">IA No cargada</span>
+                <div class="power-bar-actions">
+                    <button class="btn btn-i" onclick="agregarMiembroManual()">➕ AGREGAR</button>
+                    <button class="btn btn-m" onclick="sincronizarConNube()">💾 GUARDAR</button>
+                    <button class="btn btn-s" onclick="imprimirTodosLosCarnets()">📇 CARNÉS</button>
+                    <button class="btn btn-dark" onclick="document.getElementById('csvFile').click()">📤 IMPORTAR</button>
+                    <button class="btn btn-w" onclick="exportarCSV()">📥 EXPORTAR</button>
+                    <button class="btn btn-i" onclick="duplicarMiembro()">👥 DUPLICAR</button>
+                    <input type="file" id="csvFile" accept=".csv" style="display:none;" onchange="importarCSV()">
+                    <span id="admin-ai-status" class="ai-status" style="margin-left: 15px;">IA No cargada</span>
                 </div>
+                <button class="btn btn-d btn-full" style="margin-top: 10px;" onclick="mostrarConfirmacionBorrar()">🧨 BORRAR TODO</button>
             </div>
             
-            <input type="text" id="busqueda" placeholder="🔍 Buscar estudiante..." onkeyup="filtrarRapido()">
+            <input type="text" id="busqueda" placeholder="🔍 Buscar..." onkeyup="filtrarRapido()">
             
             <table>
                 <thead>
                     <tr>
-                        <th>Asistencia Hoy</th>
-                        <th>Cédula</th>
+                        <th>Estado</th>
+                        <th>Código</th>
                         <th>Nombre</th>
                         <th>Sección</th>
+                        <th>WhatsApp</th>
                         <th>Rostro IA</th>
                         <th class="no-print">Acciones</th>
                     </tr>
@@ -349,14 +370,15 @@
                     <label style="color: var(--text-secondary); font-weight:bold;">Fecha:</label>
                     <input type="date" id="reportDate" style="margin:0; max-width:150px;">
                 </div>
-                <div style="display:flex; gap:5px;">
+                <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:10px;">
                     <button class="btn btn-s" onclick="filtrarVistaReporte('ENTRADA')">✅ Llegaron</button>
                     <button class="btn btn-m" onclick="filtrarVistaReporte('SALIDA')">🚪 Salieron</button>
                     <button class="btn btn-d" onclick="filtrarVistaReporte('AUSENTES')">❌ Ausentes</button>
                     <button class="btn btn-i" onclick="filtrarVistaReporte('TODOS')">📋 Todos</button>
                 </div>
-                <div style="display:flex; gap:5px;">
+                <div style="display:flex; gap:5px; margin-top:10px;">
                     <button class="btn btn-w" onclick="exportarPDFReporte()">📕 PDF</button>
+                    <button class="btn btn-dark" onclick="if(confirm('¿Borrar historial del día?')) borrarHistorialDia();">🗑️ Borrar Día</button>
                 </div>
             </div>
             <h2 id="tituloReporte" style="color:var(--accent-primary); text-align:center; margin:20px 0;">Seleccione un filtro</h2>
@@ -389,11 +411,10 @@
 
     <script>
         // ============================================
-        // CONFIGURACIÓN FIREBASE (Con tus credenciales)
+        // CONFIGURACIÓN FIREBASE (Con tus credenciales y reglas)
         // ============================================
         let NUMERO_OFICIAL_JUNTA = "88888888"; 
         
-        // Credenciales extraídas del archivo "credenciales.txt"
         const firebaseConfig = {
             apiKey: "AIzaSyBpGu9Bnr5pQhNBK4kYpoh4GuLkR4CED4c",
             authDomain: "escuela-la-carpio.firebaseapp.com",
@@ -410,11 +431,16 @@
 
         let db = { personas: {} };
         let logsGlobal = [];
-        let passMaster = "CARPIO2026";
-        let passEscaner = "1234";
+        let passMaster = localStorage.getItem('PASS_MASTER') || "CARPIO2026";
+        let passEscaner = localStorage.getItem('PASS_SCAN') || "1234";
 
         document.getElementById('reportDate').value = new Date().toLocaleDateString('sv-SE');
         database.ref('config/numeroOficial').on('value', (s) => { if(s.val()) NUMERO_OFICIAL_JUNTA = s.val(); });
+
+        // Cargar imagen de fondo si existe
+        if(localStorage.getItem('CUSTOM_BG')) {
+            document.body.style.backgroundImage = `url(${localStorage.getItem('CUSTOM_BG')})`;
+        }
 
         // ============================================
         // ESTADO DE INTELIGENCIA ARTIFICIAL
@@ -424,19 +450,14 @@
         let scannerActivo = false;
         let enCooldown = false;
         let streamActual = null;
-        
-        // Variables para registro de admin
         let idCapturaActual = null;
         let descriptorDetectado = null;
         let registroLoopId = null;
 
-        // Cargar modelos desde CDN confiable
         async function inicializarIA() {
             if(iaCargada) return;
-            actualizarEstadoIA("Descargando modelos de IA (10MB)... Espera por favor.");
-            
+            actualizarEstadoIA("Descargando modelos de IA (10MB)... Espera.");
             const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
-            
             try {
                 await Promise.all([
                     faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
@@ -457,27 +478,20 @@
             document.getElementById('admin-ai-status').innerText = msg;
         }
 
-        // Construir base de datos de rostros en memoria
         function construirFaceMatcher() {
             if(!iaCargada) return;
             const labeledDescriptors = [];
-            
             for (const id in db.personas) {
                 const persona = db.personas[id];
                 if (persona.descriptor && persona.descriptor.length === 128) {
-                    // Convertir array normal de Firebase a Float32Array requerido por face-api
                     const floatArray = new Float32Array(persona.descriptor);
                     labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(id, [floatArray]));
                 }
             }
-            
             if (labeledDescriptors.length > 0) {
-                // Tolerancia de 0.5 (Más bajo = más estricto. 0.5 es buen balance)
                 faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.5);
-                console.log("FaceMatcher actualizado. Rostros entrenados:", labeledDescriptors.length);
             } else {
                 faceMatcher = null;
-                console.log("No hay rostros registrados aún.");
             }
         }
 
@@ -487,14 +501,14 @@
         function coincideFecha(horaLog, fechaInputISO) {
             if(!horaLog || !fechaInputISO) return false;
             let [y, m, d] = fechaInputISO.split('-');
-            const str = horaLog;
-            return str.includes(`${m}/${d}/${y}`) || str.includes(`${m.padStart(2,'0')}/${d}/${y}`) || str.includes(`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
+            m = parseInt(m).toString(); d = parseInt(d).toString();
+            return horaLog.includes(`${m}/${d}/${y}`) || horaLog.includes(`${m.padStart(2,'0')}/${d}/${y}`) || horaLog.includes(`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
         }
 
         database.ref('personas').on('value', (s) => { 
             db.personas = s.val() || {}; 
             renderAlumnos(); 
-            construirFaceMatcher(); // Reconstruir buscador si alguien nuevo se registra
+            construirFaceMatcher(); 
         });
         
         database.ref('logs').on('value', (s) => { 
@@ -517,10 +531,7 @@
                 let tipo = "";
                 if (!tieneE) tipo = "ENTRADA"; 
                 else if (!tieneS) tipo = "SALIDA"; 
-                else { 
-                    mostrarMensajeTemp("Ya registró Entrada y Salida hoy.", "var(--accent-warning)"); 
-                    return; 
-                }
+                else { mostrarMensajeTemp("Ya registró Entrada y Salida hoy.", "var(--accent-warning)"); return; }
                 
                 database.ref('logs').push({ id: id, nombre: db.personas[id].nombre, hora: new Date().toLocaleString(), fechaISO: hISO, tipo: tipo });
                 
@@ -530,7 +541,6 @@
                 document.getElementById('resNombre').innerText = db.personas[id].nombre; 
                 document.getElementById('resMov').innerText = (tipo === "ENTRADA" ? "✅ Entrada" : "🚪 Salida") + " Registrada";
                 
-                // Efecto visual y cooldown
                 document.getElementById('scan-video-container').style.borderColor = "var(--accent-success)";
                 setTimeout(() => {
                     res.style.display = 'none';
@@ -543,211 +553,129 @@
 
         function mostrarMensajeTemp(msg, color) {
             const status = document.getElementById('scan-ai-status');
-            const old = status.innerText;
-            status.innerText = msg;
-            status.style.color = color;
+            const old = status.innerText; status.innerText = msg; status.style.color = color;
             setTimeout(() => { status.innerText = old; status.style.color = "var(--accent-warning)"; }, 3000);
         }
 
-        // Ingreso manual por Enter
         document.getElementById('lector').addEventListener('keydown', (e) => {
-            if(e.key === 'Enter' && e.target.value.trim() !== '') {
-                procesarEscaneo(e.target.value);
-                e.target.value = '';
-            }
+            if(e.key === 'Enter' && e.target.value.trim() !== '') { procesarEscaneo(e.target.value); e.target.value = ''; }
         });
 
         // ============================================
-        // ESCÁNER FACIAL (CÁMARA PRINCIPAL)
+        // ESCÁNER FACIAL E IA
         // ============================================
         async function toggleScanner() {
             const container = document.getElementById('scan-video-container');
             const btn = document.getElementById('btnCamaraMain');
 
             if (!scannerActivo) {
-                if(!iaCargada) {
-                    btn.innerText = "⏳ Cargando IA...";
-                    await inicializarIA();
-                }
-                
-                if(!faceMatcher) {
-                    alert("Aún no hay rostros registrados en el sistema. Registre alumnos primero desde Administración.");
-                }
-
+                if(!iaCargada) { btn.innerText = "⏳ Cargando IA..."; await inicializarIA(); }
+                if(!faceMatcher) alert("No hay rostros registrados aún.");
                 try {
                     streamActual = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
                     const video = document.getElementById('scan-video');
                     video.srcObject = streamActual;
-                    
-                    container.classList.add('active');
-                    container.classList.add('scanning');
-                    btn.innerText = "🛑 Detener Escáner";
-                    btn.classList.replace('btn-i', 'btn-d');
-                    
+                    container.classList.add('active', 'scanning');
+                    btn.innerText = "🛑 Detener Escáner"; btn.classList.replace('btn-i', 'btn-d');
                     scannerActivo = true;
                     video.addEventListener('play', loopReconocimiento);
-                    actualizarEstadoIA("👁️ Escáner Activo. Mirar a la cámara.");
-                } catch (err) {
-                    alert("Error accediendo a la cámara. Revisa los permisos.");
-                    console.error(err);
-                }
+                    actualizarEstadoIA("👁️ Escáner Activo.");
+                } catch (err) { alert("Error con la cámara."); }
             } else {
                 detenerCamaras();
-                container.classList.remove('active');
-                container.classList.remove('scanning');
-                btn.innerText = "🟢 Iniciar Escáner";
-                btn.classList.replace('btn-d', 'btn-i');
-                scannerActivo = false;
-                actualizarEstadoIA("IA en pausa.");
+                container.classList.remove('active', 'scanning');
+                btn.innerText = "🟢 Iniciar Escáner"; btn.classList.replace('btn-d', 'btn-i');
+                scannerActivo = false; actualizarEstadoIA("IA en pausa.");
             }
         }
 
         async function loopReconocimiento() {
             if(!scannerActivo) return;
-            const video = document.getElementById('scan-video');
-            const canvas = document.getElementById('scan-canvas');
-            
+            const video = document.getElementById('scan-video'); const canvas = document.getElementById('scan-canvas');
             if(video.paused || video.ended) return setTimeout(loopReconocimiento, 100);
 
-            // Preparar dimensiones de canvas
             const displaySize = { width: video.clientWidth, height: video.clientHeight };
             faceapi.matchDimensions(canvas, displaySize);
-
-            // Detectar rostro
             const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
             
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             if(detection) {
                 const resized = faceapi.resizeResults(detection, displaySize);
-                // Dibujar caja sutil
                 const box = resized.detection.box;
-                ctx.strokeStyle = "rgba(0, 217, 255, 0.7)";
-                ctx.lineWidth = 2;
-                ctx.strokeRect(box.x, box.y, box.width, box.height);
+                ctx.strokeStyle = "rgba(0, 217, 255, 0.7)"; ctx.lineWidth = 2; ctx.strokeRect(box.x, box.y, box.width, box.height);
 
                 if(faceMatcher && !enCooldown) {
-                    // Buscar coincidencia
                     const match = faceMatcher.findBestMatch(detection.descriptor);
-                    
                     if(match.label !== 'unknown') {
-                        // Coincidencia encontrada!
-                        ctx.fillStyle = "rgba(0, 255, 136, 0.8)";
-                        ctx.font = "16px Arial";
-                        const nombre = db.personas[match.label]?.nombre || match.label;
-                        ctx.fillText(nombre, box.x, box.y - 10);
-                        
+                        ctx.fillStyle = "rgba(0, 255, 136, 0.8)"; ctx.font = "16px Arial";
+                        ctx.fillText(db.personas[match.label]?.nombre || match.label, box.x, box.y - 10);
                         procesarEscaneo(match.label);
-                        
-                        // Cooldown para no marcar múltiples veces por segundo
-                        enCooldown = true;
-                        setTimeout(() => { enCooldown = false; }, 4000); 
+                        enCooldown = true; setTimeout(() => { enCooldown = false; }, 4000); 
                     } else {
-                        ctx.fillStyle = "rgba(255, 68, 68, 0.8)";
-                        ctx.font = "16px Arial";
-                        ctx.fillText("Desconocido", box.x, box.y - 10);
+                        ctx.fillStyle = "rgba(255, 68, 68, 0.8)"; ctx.font = "16px Arial"; ctx.fillText("Desconocido", box.x, box.y - 10);
                     }
                 }
             }
-            
-            // Repetir ciclo cada 150ms (No necesitamos 60fps, ahorra batería)
             setTimeout(loopReconocimiento, 150);
         }
 
         function detenerCamaras() {
-            if (streamActual) {
-                streamActual.getTracks().forEach(track => track.stop());
-                streamActual = null;
-            }
+            if (streamActual) { streamActual.getTracks().forEach(track => track.stop()); streamActual = null; }
             clearTimeout(registroLoopId);
         }
 
         // ============================================
-        // MODAL DE REGISTRO FACIAL (ADMIN)
+        // REGISTRO FACIAL (ADMIN)
         // ============================================
         async function abrirRegistroRostro(id) {
             if(!iaCargada) await inicializarIA();
-            
-            idCapturaActual = id;
-            const persona = db.personas[id];
+            idCapturaActual = id; const persona = db.personas[id];
             document.getElementById('modal-student-name').innerText = persona.nombre + " (" + id + ")";
             document.getElementById('face-modal').style.display = 'flex';
             document.getElementById('btnCaptureFace').disabled = true;
-            document.getElementById('reg-status').innerText = "Buscando rostro...";
-            document.getElementById('reg-status').style.color = "var(--accent-warning)";
-
+            document.getElementById('reg-status').innerText = "Buscando rostro..."; document.getElementById('reg-status').style.color = "var(--accent-warning)";
             try {
                 streamActual = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-                const video = document.getElementById('reg-video');
-                video.srcObject = streamActual;
+                const video = document.getElementById('reg-video'); video.srcObject = streamActual;
                 video.addEventListener('play', loopCapturaAdmin);
-            } catch (err) {
-                alert("Error con la cámara.");
-                cerrarFaceModal();
-            }
+            } catch (err) { alert("Error con la cámara."); cerrarFaceModal(); }
         }
 
         async function loopCapturaAdmin() {
-            const video = document.getElementById('reg-video');
-            const canvas = document.getElementById('reg-canvas');
-            
+            const video = document.getElementById('reg-video'); const canvas = document.getElementById('reg-canvas');
             if(!streamActual || video.paused || video.ended) return;
-
             const displaySize = { width: video.clientWidth, height: video.clientHeight };
             faceapi.matchDimensions(canvas, displaySize);
-
             const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
-            
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const btn = document.getElementById('btnCaptureFace');
-            const status = document.getElementById('reg-status');
+            const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const btn = document.getElementById('btnCaptureFace'); const status = document.getElementById('reg-status');
 
             if(detection) {
                 const resized = faceapi.resizeResults(detection, displaySize);
-                faceapi.draw.drawDetections(canvas, resized);
-                faceapi.draw.drawFaceLandmarks(canvas, resized); // Muestra los puntos de la cara
-                
-                descriptorDetectado = Array.from(detection.descriptor); // Convertir a Array normal para Firebase
-                
-                btn.disabled = false;
-                status.innerText = "✅ Rostro detectado. ¡Puede guardar!";
-                status.style.color = "var(--accent-success)";
+                faceapi.draw.drawDetections(canvas, resized); faceapi.draw.drawFaceLandmarks(canvas, resized);
+                descriptorDetectado = Array.from(detection.descriptor);
+                btn.disabled = false; status.innerText = "✅ Rostro detectado. ¡Puede guardar!"; status.style.color = "var(--accent-success)";
             } else {
-                descriptorDetectado = null;
-                btn.disabled = true;
-                status.innerText = "Mire fijamente a la cámara...";
-                status.style.color = "var(--accent-warning)";
+                descriptorDetectado = null; btn.disabled = true; status.innerText = "Mire a la cámara..."; status.style.color = "var(--accent-warning)";
             }
-            
             registroLoopId = setTimeout(loopCapturaAdmin, 200);
         }
 
         function capturarYGuardarRostro() {
             if(idCapturaActual && descriptorDetectado) {
                 db.personas[idCapturaActual].descriptor = descriptorDetectado;
-                sincronizarConNube(); // Guarda en Firebase
-                alert("Rostro guardado exitosamente.");
-                cerrarFaceModal();
-                construirFaceMatcher(); // Reconstruir IA con la nueva cara
+                sincronizarConNube(); alert("Rostro guardado exitosamente.");
+                cerrarFaceModal(); construirFaceMatcher();
             }
         }
-
-        function cerrarFaceModal() {
-            document.getElementById('face-modal').style.display = 'none';
-            detenerCamaras();
-            idCapturaActual = null;
-            descriptorDetectado = null;
-        }
-
+        function cerrarFaceModal() { document.getElementById('face-modal').style.display = 'none'; detenerCamaras(); idCapturaActual = null; descriptorDetectado = null; }
 
         // ============================================
-        // FUNCIONES ADMINISTRATIVAS Y TABLAS
+        // FUNCIONES DE ADMINISTRADOR Y TABLAS
         // ============================================
         function renderAlumnos() {
-            const t = document.getElementById('tablaAlumnos'); 
-            t.innerHTML = "";
+            const t = document.getElementById('tablaAlumnos'); t.innerHTML = "";
             const hISO = new Date().toLocaleDateString('sv-SE');
             const pres = [...new Set(logsGlobal.filter(l => (l.fechaISO?l.fechaISO===hISO:coincideFecha(l.hora, hISO)) && l.tipo === 'ENTRADA').map(l => l.id))];
             
@@ -757,77 +685,84 @@
                 
                 t.insertAdjacentHTML('beforeend', `
                     <tr>
-                        <td><span class="status-badge ${isP?'status-in':'status-none'}">${isP?'✓ Entró':'✗ No'}</span></td>
+                        <td><span class="status-badge ${isP?'status-in':'status-none'}">${isP?'✓':'✗'}</span></td>
                         <td><b>${id}</b></td>
-                        <td><input style="border:none;background:transparent;color:var(--text-primary);width:100%" value="${p.nombre}" onchange="db.personas['${id}'].nombre=this.value"></td>
+                        <td><input style="border:none;background:transparent;color:var(--text-primary);width:100%" value="${p.nombre||''}" onchange="db.personas['${id}'].nombre=this.value"></td>
                         <td><input style="border:none;background:transparent;color:var(--text-secondary);font-weight:bold;width:100%" value="${p.puesto||''}" onchange="db.personas['${id}'].puesto=this.value"></td>
-                        <td>
-                            <span class="${tieneRostro ? 'face-yes' : 'face-no'}">${tieneRostro ? '👤 Sí' : '👤 No'}</span>
-                        </td>
+                        <td><input style="border:none;background:transparent;color:var(--text-primary);width:100%" value="${p.telefono||''}" onchange="db.personas['${id}'].telefono=this.value"></td>
+                        <td><span class="${tieneRostro?'face-yes':'face-no'}">${tieneRostro?'👤 Sí':'👤 No'}</span></td>
                         <td class="no-print">
-                            <button class="btn btn-m" style="padding: 6px 10px;" onclick="abrirRegistroRostro('${id}')" title="Registrar Rostro">📷</button>
-                            <button class="btn btn-d" style="padding: 6px 10px;" onclick="if(confirm('¿Borrar estudiante?')) { database.ref('personas/'+'${id}').remove(); }" title="Eliminar">🗑️</button>
+                            <button class="btn btn-s" style="padding:6px 10px;" onclick="enviarWA('${p.telefono||''}')" title="WhatsApp">💬</button>
+                            <button class="btn btn-i" style="padding:6px 10px;" onclick="descargarCarnet('${id}')" title="Ver Carnet">📇</button>
+                            <button class="btn btn-m" style="padding:6px 10px;" onclick="abrirRegistroRostro('${id}')" title="Registrar Rostro">📷</button>
+                            <button class="btn btn-d" style="padding:6px 10px;" onclick="if(confirm('¿Borrar estudiante?')) { database.ref('personas/'+'${id}').remove(); }" title="Eliminar">🗑️</button>
                         </td>
                     </tr>
                 `);
             });
         }
 
-        function agregarMiembroManual() { 
-            const id = prompt("Cédula:"); 
-            if(id) { 
-                db.personas[id] = { nombre: prompt("Nombre:"), puesto: prompt("Sección:") }; 
-                renderAlumnos(); 
-            } 
+        // --- Botones Superiores de Administración ---
+        function editarNumeroJunta() { let n = prompt("Número de contacto general para WhatsApp:", NUMERO_OFICIAL_JUNTA); if(n) { database.ref('config/numeroOficial').set(n); alert("Actualizado."); } }
+        function cambiarFondo() { let url = prompt("Ingrese URL de la imagen de fondo:"); if(url){ localStorage.setItem('CUSTOM_BG', url); document.body.style.backgroundImage = `url(${url})`; } else if (url === "") { localStorage.removeItem('CUSTOM_BG'); document.body.style.backgroundImage = 'none'; } }
+        function cambiarPasswordMaster() { let n = prompt("Nueva Clave de Administrador:"); if(n){ passMaster=n; localStorage.setItem('PASS_MASTER',n); alert('Clave actualizada'); } }
+        function mostrarEstadisticas() { 
+            const total = Object.keys(db.personas).length; 
+            const presentes = logsGlobal.filter(l => l.tipo === 'ENTRADA' && (l.fechaISO === new Date().toLocaleDateString('sv-SE') || coincideFecha(l.hora, new Date().toLocaleDateString('sv-SE')))).length; 
+            alert(`ESTADÍSTICAS DEL DÍA:\n\nTotal Miembros: ${total}\nPresentes: ${presentes}\nAusentes: ${total - presentes}\n% de Asistencia: ${total>0?((presentes/total)*100).toFixed(1):0}%`); 
         }
+        function mostrarConfiguracion() { alert('Información del Sistema:\n\nInstitución y servicio al cliente.\nEncargado del Sistema Administrador.\nVersión: IA Integrada 2.0'); }
 
-        function sincronizarConNube() { 
-            database.ref('personas').set(db.personas); 
-            alert("Base de datos guardada en la nube."); 
+        // --- Barra de Herramientas Miembros ---
+        function agregarMiembroManual() { const id = prompt("Cédula/Código nuevo:"); if(id) { db.personas[id] = { nombre: prompt("Nombre:"), puesto: prompt("Sección:"), telefono: prompt("WhatsApp:") }; renderAlumnos(); } }
+        function sincronizarConNube() { database.ref('personas').set(db.personas); alert("Datos guardados en la nube."); }
+        function importarCSV() { 
+            const f = document.getElementById('csvFile').files[0]; const r = new FileReader(); 
+            r.onload = (e) => { e.target.result.split('\n').forEach((l, i) => { if(i>0 && l.trim()){ let c=l.split(','); db.personas[c[0].trim()]={nombre:c[1]?.trim(), puesto:c[2]?.trim(), telefono:c[3]?.trim()}; } }); renderAlumnos(); alert("Base de datos importada."); }; 
+            r.readAsText(f); 
         }
-
-        // ============================================
-        // VISTAS DE NAVEGACIÓN Y REPORTES
-        // ============================================
-        function mostrarVista(id) { 
-            document.getElementById('scan-view').style.display = (id==='scan-view')?'flex':'none'; 
-            document.getElementById('parent-view').style.display = (id==='parent-view')?'flex':'none'; 
-            if(id!=='scan-view' && scannerActivo) toggleScanner(); 
-        }
+        function exportarCSV() { let csv = 'Código,Nombre,Sección,WhatsApp\n'; Object.entries(db.personas).forEach(([id, p]) => { csv += `${id},${p.nombre},${p.puesto || ''},${p.telefono || ''}\n`; }); const link = document.createElement('a'); link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); link.download = `Miembros_${new Date().toISOString().split('T')[0]}.csv`; link.click(); }
+        function duplicarMiembro() { const id = prompt('Código a duplicar:'); if(id && db.personas[id]) { const newId = prompt('Nuevo código para el duplicado:'); if(newId) { db.personas[newId] = {...db.personas[id]}; renderAlumnos(); alert('Usuario duplicado'); } } }
+        function mostrarConfirmacionBorrar() { if(confirm('⚠️ ADVERTENCIA: ¿Borrar TODA la base de datos (Miembros y Logs)?\n\nPresione OK para confirmar.')) { database.ref('personas').remove(); database.ref('logs').remove(); location.reload(); } }
         
-        function pedirClaveEscaner() { if(prompt("Clave de escáner:") === passEscaner) mostrarVista('scan-view'); }
+        function enviarWA(tel) { if(!tel || tel==='') { alert("No hay número registrado para este usuario."); return;} window.open(`https://wa.me/506${tel.replace(/\D/g,'')}`, '_blank'); }
+
+        // --- Generación de Carnés QR ---
+        function descargarCarnet(id) {
+            const p = db.personas[id];
+            const win = window.open('','','width=350,height=500');
+            win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#0a0e27;}.card{width:280px;height:420px;background:#1a1f3a;border-radius:16px;box-shadow:0 16px 48px rgba(0,0,0,0.5);overflow:hidden;position:relative;border:1px solid #2a3250;}.header{background:#00d9ff;height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#0a0e27;text-align:center;font-weight:bold;}.qr-container{background:#1a1f3a;padding:15px;border-radius:10px;margin-top:20px;display:inline-block;border:1px solid #2a3250;}.info{padding:20px;text-align:center;color:#e8eef5;}.id-label{font-size:1.6rem;font-weight:900;color:#00d9ff;margin:10px 0;}.footer{position:absolute;bottom:0;width:100%;height:15px;background:linear-gradient(90deg,#00d9ff 33%,#1a1f3a 33%,#1a1f3a 66%,#ff4444 66%);}</style></head><body><div class="card"><div class="header">ESCUELA LA CARPIO</div><div style="text-align:center;"><div class="qr-container"><div id="q"></div></div></div><div class="info"><div class="id-label">${id}</div><div style="font-weight:bold;font-size:1.2rem;">${p.nombre}</div><div style="color:#a8b2c1;margin-top:5px;">${p.puesto||''}</div></div><div class="footer"></div></div><script>new QRCode(document.getElementById("q"),{text:"${id}",width:140,height:140});setTimeout(()=>window.print(),800);<\/script></body></html>`);
+            win.document.close();
+        }
+
+        function imprimirTodosLosCarnets() {
+            const win = window.open('',''); win.document.write(`<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head><body><style>@media print { div { page-break-inside: avoid; } }</style>`);
+            Object.entries(db.personas).forEach(([id,p]) => { win.document.write(`<div style="width:200px;border:1px solid #333;padding:10px;text-align:center;display:inline-block;margin:5px;font-family:sans-serif;"><div id="qr-${id.replace(/\W/g,'')}"></div><br><b style="font-size:1.2rem;">${id}</b><br>${p.nombre}<br><small>${p.puesto||''}</small></div>`); });
+            win.document.write(`<script>${Object.keys(db.personas).map(id => `new QRCode(document.getElementById("qr-${id.replace(/\\W/g,'')}\"),{text:"${id}",width:100,height:100});`).join('\n')} setTimeout(()=>window.print(),1500);<\/script></body></html>`);
+            win.document.close();
+        }
+
+        // ============================================
+        // VISTAS Y REPORTES
+        // ============================================
+        function mostrarVista(id) { document.getElementById('scan-view').style.display = (id==='scan-view')?'flex':'none'; document.getElementById('parent-view').style.display = (id==='parent-view')?'flex':'none'; if(id!=='scan-view' && scannerActivo) toggleScanner(); }
+        function pedirClaveEscaner() { if(prompt("Clave:") === passEscaner) mostrarVista('scan-view'); }
         function pedirClaveMaster() { if(prompt("Clave Admin:") === passMaster) { document.getElementById('master-panel').style.display = 'block'; inicializarIA(); } }
         function cerrarMaster() { document.getElementById('master-panel').style.display = 'none'; detenerCamaras(); }
         function cerrarVistaProtegida(id) { document.getElementById(id).style.display = 'none'; mostrarVista('parent-view'); detenerCamaras(); }
-        
-        function cambiarTab(n) { 
-            document.getElementById('sec-alumnos').style.display = (n===1)?'block':'none'; 
-            document.getElementById('sec-reporte').style.display = (n===2)?'block':'none'; 
-            document.getElementById('tab1').className = (n===1)?'tab-btn active':'tab-btn'; 
-            document.getElementById('tab2').className = (n===2)?'tab-btn active':'tab-btn'; 
-        }
+        function cambiarTab(n) { document.getElementById('sec-alumnos').style.display = (n===1)?'block':'none'; document.getElementById('sec-reporte').style.display = (n===2)?'block':'none'; document.getElementById('tab1').className = (n===1)?'tab-btn active':'tab-btn'; document.getElementById('tab2').className = (n===2)?'tab-btn active':'tab-btn'; }
+        function filtrarRapido() { let f = document.getElementById('busqueda').value.toUpperCase(); let rows = document.getElementById("tablaAlumnos").getElementsByTagName("tr"); for (let i = 0; i < rows.length; i++) { rows[i].style.display = (rows[i].textContent.toUpperCase().indexOf(f) > -1) ? "" : "none"; } }
 
-        function filtrarRapido() { 
-            let f = document.getElementById('busqueda').value.toUpperCase(); 
-            let rows = document.getElementById("tablaAlumnos").getElementsByTagName("tr"); 
-            for (let i = 0; i < rows.length; i++) { 
-                rows[i].style.display = (rows[i].textContent.toUpperCase().indexOf(f) > -1) ? "" : "none"; 
-            } 
-        }
-
-        // Consulta de padres (Igual al original)
         function consultarPadre() {
             const id = document.getElementById('parentInput').value.trim();
             if(!db.personas[id]) return alert("Cédula no encontrada.");
             const p = db.personas[id];
             document.getElementById('parentStudentName').innerText = p.nombre;
             document.getElementById('parentStudentPuesto').innerText = "Sección: " + (p.puesto || "N/A");
-            
             document.getElementById('btnConsultaWA').onclick = () => { 
                 const mensaje = `Hola, quisiera realizar una consulta sobre el estudiante: ${p.nombre} (ID: ${id}).`;
                 window.open(`https://wa.me/506${NUMERO_OFICIAL_JUNTA}?text=${encodeURIComponent(mensaje)}`, '_blank');
             };
-            
             database.ref('logs').orderByChild('id').equalTo(id).once('value', (s) => {
                 const list = document.getElementById('parentLogList'); list.innerHTML = "";
                 if(s.exists()){ s.forEach(c => { let l=c.val(); list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #3a4560;"><span>${l.hora}</span> - <b style="color:${l.tipo==='ENTRADA'?'#00ff88':'#ff4444'}">${l.tipo}</b></div>` + list.innerHTML; }); }
@@ -836,30 +771,27 @@
             });
         }
 
+        function borrarHistorialDia() { const hISO = document.getElementById('reportDate').value; logsGlobal.filter(l => l.fechaISO === hISO || coincideFecha(l.hora, hISO)).forEach(l => database.ref('logs/'+l.key).remove()); alert('Registros del día eliminados.'); }
+
         function filtrarVistaReporte(tipo) {
             const fechaBuscada = document.getElementById('reportDate').value;
             if(!fechaBuscada) return alert("Seleccione una fecha");
-            const cuerpo = document.getElementById('cuerpoReporte');
-            const head = document.getElementById('headReporte');
-            const titulo = document.getElementById('tituloReporte');
+            const cuerpo = document.getElementById('cuerpoReporte'); const head = document.getElementById('headReporte'); const titulo = document.getElementById('tituloReporte');
             cuerpo.innerHTML = "";
             let logsDelDia = logsGlobal.filter(l => l.fechaISO ? l.fechaISO === fechaBuscada : coincideFecha(l.hora, fechaBuscada));
 
             if(tipo === 'ENTRADA' || tipo === 'SALIDA') {
                 titulo.innerText = tipo === 'ENTRADA' ? `✅ Llegaron` : `🚪 Salieron`;
                 head.innerHTML = `<tr><th>Hora</th><th>Cédula</th><th>Nombre</th><th>Sección</th></tr>`;
-                const filtrados = logsDelDia.filter(l => l.tipo === tipo);
-                filtrados.forEach(l => {
-                    const p = db.personas[l.id] || {};
-                    let h = l.hora.includes(',') ? l.hora.split(',')[1] : l.hora;
+                logsDelDia.filter(l => l.tipo === tipo).forEach(l => {
+                    const p = db.personas[l.id] || {}; let h = l.hora.includes(',') ? l.hora.split(',')[1] : l.hora;
                     cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${h}</td><td><b>${l.id}</b></td><td>${l.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
                 });
             } else if(tipo === 'TODOS') {
                 titulo.innerText = `📋 Todos los Movimientos`;
                 head.innerHTML = `<tr><th>Hora</th><th>Cédula</th><th>Nombre</th><th>Tipo</th><th>Sección</th></tr>`;
                 logsDelDia.forEach(l => {
-                    const p = db.personas[l.id] || {};
-                    let h = l.hora.includes(',') ? l.hora.split(',')[1] : l.hora;
+                    const p = db.personas[l.id] || {}; let h = l.hora.includes(',') ? l.hora.split(',')[1] : l.hora;
                     cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${h}</td><td><b>${l.id}</b></td><td>${l.nombre}</td><td><span class="status-badge ${l.tipo === 'ENTRADA' ? 'status-in' : 'status-none'}">${l.tipo}</span></td><td>${p.puesto || '-'}</td></tr>`);
                 });
             } else {
@@ -867,9 +799,7 @@
                 head.innerHTML = `<tr><th>Cédula</th><th>Nombre</th><th>Sección</th></tr>`;
                 const presentes = [...new Set(logsDelDia.filter(l => l.tipo === 'ENTRADA').map(l => l.id))];
                 Object.entries(db.personas).forEach(([id, p]) => {
-                    if(!presentes.includes(id)) {
-                        cuerpo.insertAdjacentHTML('beforeend', `<tr><td><b>${id}</b></td><td>${p.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
-                    }
+                    if(!presentes.includes(id)) cuerpo.insertAdjacentHTML('beforeend', `<tr><td><b>${id}</b></td><td>${p.nombre}</td><td>${p.puesto || '-'}</td></tr>`);
                 });
             }
         }
