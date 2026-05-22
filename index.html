@@ -281,6 +281,9 @@
 </head>
 <body>
 
+    <!-- INPUT OCULTO PARA SUBIR FOTO DE FONDO -->
+    <input type="file" id="bgUploader" accept="image/*" style="display:none;" onchange="procesarSubidaFondo(event)">
+
     <!-- NAVBAR -->
     <div class="navbar no-print">
         <div class="navbar-title">🤖 Asistencia IA</div>
@@ -354,7 +357,7 @@
 
             <button id="btnCamaraMain" class="btn btn-i btn-full" onclick="toggleScanner()">🟢 Iniciar Escáner</button>
 
-            <!-- Resultado de escaneo exitoso -->
+            <!-- Resultado de escaneo exitoso con Emociones -->
             <div id="resBox">
                 <h2 id="resNombre"></h2>
                 <h3 id="resMov"></h3>
@@ -411,7 +414,7 @@
             <h1>⚙️ Administración</h1>
             <div class="panel-header-actions">
                 <button class="btn btn-s" onclick="editarNumeroJunta()">📱 TEL</button>
-                <button class="btn btn-i" onclick="cambiarFondo()">🖼️ FONDO</button>
+                <button class="btn btn-i" onclick="cambiarFondoUpload()">🖼️ SUBIR FONDO</button>
                 <button class="btn btn-w" onclick="cambiarPasswordMaster()">🔑 CLAVE ADMIN</button>
                 <button class="btn btn-w" style="background-color: #6d28d9; border-color: #6d28d9;" onclick="cambiarPasswordEscaner()">📷 CLAVE ESCÁNER</button>
                 <button class="btn btn-m" onclick="mostrarEstadisticas()">📈 STATS</button>
@@ -610,13 +613,12 @@
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 
-                // Melodía rápida ascendente para estudiantes/general
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
                 osc.connect(gain);
                 gain.connect(ctx.destination);
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, ctx.currentTime); // La5
+                osc.frequency.setValueAtTime(880, ctx.currentTime);
                 gain.gain.setValueAtTime(0.08, ctx.currentTime);
                 osc.start();
                 osc.stop(ctx.currentTime + 0.12);
@@ -627,7 +629,7 @@
                     osc2.connect(gain2);
                     gain2.connect(ctx.destination);
                     osc2.type = 'sine';
-                    osc2.frequency.setValueAtTime(1046.50, ctx.currentTime); // Do6
+                    osc2.frequency.setValueAtTime(1046.50, ctx.currentTime);
                     gain2.gain.setValueAtTime(0.08, ctx.currentTime);
                     osc2.start();
                     osc2.stop(ctx.currentTime + 0.18);
@@ -640,7 +642,7 @@
         function playParentMelody() {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const notes = [523.25, 659.25, 783.99, 1046.50]; // Acorde mayor Do5, Mi5, Sol5, Do6
+                const notes = [523.25, 659.25, 783.99, 1046.50];
                 const times = [0, 100, 200, 300];
                 
                 notes.forEach((freq, idx) => {
@@ -684,18 +686,18 @@
         // CÁLCULO DE DISTANCIA (FÓRMULA HAVERSINE)
         // ============================================
         function calcularDistancia(lat1, lon1, lat2, lon2) {
-            const R = 6371000; // Radio de la Tierra en metros
+            const R = 6371000;
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
                       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
                       Math.sin(dLon / 2) * Math.sin(dLon / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c; // metros
+            return R * c; 
         }
 
         // ============================================
-        // ESTADO DE INTELIGENCIA ARTIFICIAL
+        // ESTADO DE INTELIGENCIA ARTIFICIAL Y EMOCIONES
         // ============================================
         let iaCargada = false;
         let faceMatcher = null;
@@ -704,22 +706,24 @@
         let enCooldown = false;
         let streamActual = null;
         let idCapturaActual = null;
-        let tipoCapturaActual = 'estudiante'; // 'estudiante', 'padre1', 'padre2'
+        let tipoCapturaActual = 'estudiante'; 
         let descriptorDetectado = null;
         let registroLoopId = null;
 
         async function inicializarIA() {
             if(iaCargada) return;
-            actualizarEstadoIA("Descargando modelos de IA (10MB)... Espera.");
+            actualizarEstadoIA("Descargando modelos biométricos y de emociones (10MB)... Espera.");
             const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
             try {
+                // Se agregó faceExpressionNet para detectar estados de ánimo (triste, feliz, enojado, etc)
                 await Promise.all([
                     faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
                     faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
                 ]);
                 iaCargada = true;
-                actualizarEstadoIA("✅ Inteligencia Artificial Lista");
+                actualizarEstadoIA("✅ Inteligencia Artificial (y Emociones) Lista");
                 construirFaceMatcher();
             } catch (err) {
                 console.error(err);
@@ -741,24 +745,20 @@
             const labeledDescriptors = [];
             for (const id in db.personas) {
                 const persona = db.personas[id];
-                // Rostro propio del usuario (Estudiante, Administrativo, etc)
                 if (persona.descriptor && persona.descriptor.length === 128) {
                     const floatArray = new Float32Array(persona.descriptor);
                     labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(id, [floatArray]));
                 }
-                // Rostro del encargado/padre 1 (asociado al estudiante)
                 if (persona.descriptorPadre1 && persona.descriptorPadre1.length === 128) {
                     const floatArrayP1 = new Float32Array(persona.descriptorPadre1);
                     labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(id + "_p1", [floatArrayP1]));
                 }
-                // Rostro del encargado/padre 2 (asociado al estudiante)
                 if (persona.descriptorPadre2 && persona.descriptorPadre2.length === 128) {
                     const floatArrayP2 = new Float32Array(persona.descriptorPadre2);
                     labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(id + "_p2", [floatArrayP2]));
                 }
             }
             if (labeledDescriptors.length > 0) {
-                // Distancia límite de coincidencia: 0.5 (menor distancia, mayor exactitud)
                 faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.5);
             } else {
                 faceMatcher = null;
@@ -910,7 +910,6 @@
             const phone = document.getElementById('regPhone').value.trim();
             const studentId = document.getElementById('regStudentId').value.trim();
             
-            // Fusión IA: Promediar los 4 descriptores (128 dimensiones) para un vector central perfecto
             let avgDesc = new Float32Array(128);
             for(let i=0; i<128; i++) {
                 let sum = 0;
@@ -922,7 +921,6 @@
             
             const finalDescArray = Array.from(avgDesc);
             
-            // Construir el nuevo perfil del usuario
             const newUser = {
                 nombre: nombre,
                 puesto: section,
@@ -931,17 +929,14 @@
                 descriptor: finalDescArray
             };
             
-            // Se guarda o actualiza el usuario general en "personas"
             database.ref('personas/' + id).update(newUser);
             
-            // Validar Enlace con Hijo/a
             if (rol === 'Padre/Encargado' && studentId) {
                 if (db.personas[studentId]) {
                     const stu = db.personas[studentId];
                     if (!stu.descriptorPadre1) {
                         database.ref('personas/' + studentId + '/descriptorPadre1').set(finalDescArray);
                     } else {
-                        // Si ya tiene el padre 1 lleno, se guarda en el padre 2
                         database.ref('personas/' + studentId + '/descriptorPadre2').set(finalDescArray);
                     }
                     alert(`✅ Registro exitoso.\n\nSe ha creado su perfil y además se ha enlazado automáticamente como encargado del estudiante con cédula ${studentId}.`);
@@ -952,7 +947,6 @@
                 alert("✅ Registro completado y almacenado exitosamente en la nube con tecnología multi-perfil.");
             }
             
-            // Limpieza del formulario
             document.getElementById('regId').value = '';
             document.getElementById('regName').value = '';
             document.getElementById('regRole').value = '';
@@ -970,10 +964,9 @@
         }
 
         // ============================================
-        // LÓGICA DE REGISTRO DE ASISTENCIA (GEOLOCALIZADA)
+        // LÓGICA DE REGISTRO DE ASISTENCIA (GEOLOCALIZADA Y EMOCIONES)
         // ============================================
-        function registrarAsistenciaConGPS(id) {
-            // Obtener ubicación antes de guardar el log
+        function registrarAsistenciaConGPS(id, strEmocion = "Neutral", emoticon = "😐") {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition((pos) => {
                     const latDisp = pos.coords.latitude;
@@ -983,7 +976,6 @@
                     const hISO = new Date().toLocaleDateString('sv-SE');
                     const esLejano = dist > geoConfig.radio;
 
-                    // Si es lejano, registrar en historial lejano de la base de datos
                     if (esLejano) {
                         database.ref('logs_lejanos').push({
                             id: id,
@@ -995,19 +987,18 @@
                         });
                     }
 
-                    completarEscaneoBD(id, hISO, esLejano, dist);
+                    completarEscaneoBD(id, hISO, esLejano, dist, strEmocion, emoticon);
                 }, (err) => {
-                    // Si se deniega el permiso GPS o hay un error, se procesa sin validar ubicación para no bloquear
                     console.log("No se pudo obtener geolocalización:", err.message);
-                    completarEscaneoBD(id, new Date().toLocaleDateString('sv-SE'), false, 0);
+                    completarEscaneoBD(id, new Date().toLocaleDateString('sv-SE'), false, 0, strEmocion, emoticon);
                 }, { enableHighAccuracy: true, timeout: 5000 });
             } else {
-                completarEscaneoBD(id, new Date().toLocaleDateString('sv-SE'), false, 0);
+                completarEscaneoBD(id, new Date().toLocaleDateString('sv-SE'), false, 0, strEmocion, emoticon);
             }
         }
 
-        function completarEscaneoBD(id, hISO, esLejano, dist) {
-            const marcas = logsGlobal.filter(l => (l.fechaISO ? l.fechaISO === hISO : coincideFecha(l.hora, hISO)) && l.id === id);
+        function completarEscaneoBD(id, hISO, esLejano, dist, strEmocion, emoticon) {
+            const marcas = logsGlobal.filter(l => (l.fechaISO ? l.fechaISO === hISO : coincideFecha(l.hora, hISO)) && l.id === id && l.tipo !== 'JUSTIFICADA');
             const tieneE = marcas.some(l => l.tipo === 'ENTRADA');
             const tieneS = marcas.some(l => l.tipo === 'SALIDA');
             
@@ -1027,20 +1018,20 @@
                 fechaISO: hISO, 
                 tipo: tipo,
                 lejano: esLejano,
-                distanciaMetros: esLejano ? Math.round(dist) : 0
+                distanciaMetros: esLejano ? Math.round(dist) : 0,
+                emocion: strEmocion,
+                emoticon: emoticon
             });
             
-            // Emite el sonido de éxito melódico
             playSuccessSound();
 
-            // Muestra la tarjeta de confirmación
             const res = document.getElementById('resBox'); 
             res.style.display = 'block'; 
             res.style.background = tipo === "ENTRADA" ? "rgba(0, 255, 136, 0.1)" : "rgba(255, 68, 68, 0.1)";
             
             let alertaLejos = esLejano ? ` <span style="color: var(--accent-danger); font-size:0.85rem;"><br>⚠️ Escaneo Lejano (${Math.round(dist)}m)</span>` : "";
             document.getElementById('resNombre').innerHTML = "✅ " + db.personas[id].nombre + alertaLejos; 
-            document.getElementById('resMov').innerText = (tipo === "ENTRADA" ? "Entrada" : "Salida") + " Registrada";
+            document.getElementById('resMov').innerHTML = (tipo === "ENTRADA" ? "Entrada" : "Salida") + ` Registrada <span style="font-size:1.5rem;" title="${strEmocion}">${emoticon}</span>`;
             
             if(scannerActivo) toggleScanner();
 
@@ -1056,7 +1047,7 @@
         }
 
         // ============================================
-        // ESCÁNER FACIAL PARA ASISTENCIA
+        // ESCÁNER FACIAL PARA ASISTENCIA CON EMOCIONES
         // ============================================
         async function toggleScanner() {
             const container = document.getElementById('scan-video-container');
@@ -1090,7 +1081,9 @@
 
             const displaySize = { width: video.clientWidth, height: video.clientHeight };
             faceapi.matchDimensions(canvas, displaySize);
-            const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+            
+            // Integrando withFaceExpressions para determinar el estado de ánimo
+            const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceExpressions().withFaceDescriptor();
             
             const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -1102,13 +1095,25 @@
                 if(faceMatcher && !enCooldown) {
                     const match = faceMatcher.findBestMatch(detection.descriptor);
                     
-                    // El escáner principal de asistencia solo permite registrar rostros propios
                     if(match.label !== 'unknown' && !match.label.includes('_p')) {
+                        // Determinar Emoción Principal
+                        let emotionStr = "Neutral";
+                        let emoticon = "😐";
+                        if(detection.expressions) {
+                            const exp = detection.expressions;
+                            const maxE = Object.keys(exp).reduce((a, b) => exp[a] > exp[b] ? a : b);
+                            if(maxE === 'happy') { emoticon = "😄"; emotionStr = "Feliz"; }
+                            else if(maxE === 'sad') { emoticon = "😢"; emotionStr = "Triste"; }
+                            else if(maxE === 'angry') { emoticon = "😡"; emotionStr = "Enojado"; }
+                            else if(maxE === 'surprised') { emoticon = "😲"; emotionStr = "Sorprendido"; }
+                            else if(maxE === 'fearful') { emoticon = "😨"; emotionStr = "Asustado"; }
+                        }
+
                         ctx.fillStyle = "rgba(0, 255, 136, 0.8)"; ctx.font = "16px Arial";
-                        ctx.fillText(db.personas[match.label]?.nombre || match.label, box.x, box.y - 10);
+                        ctx.fillText(`${emoticon} ${db.personas[match.label]?.nombre || match.label}`, box.x, box.y - 10);
                         
                         enCooldown = true;
-                        registrarAsistenciaConGPS(match.label);
+                        registrarAsistenciaConGPS(match.label, emotionStr, emoticon);
                         setTimeout(() => { enCooldown = false; }, 4000); 
                     } else if(match.label !== 'unknown' && match.label.includes('_p')) {
                         ctx.fillStyle = "rgba(255, 184, 0, 0.8)"; ctx.font = "14px Arial";
@@ -1175,7 +1180,6 @@
                         const exactitudSuficiente = distance < 0.35;
 
                         if (match.label.includes('_p1') || match.label.includes('_p2')) {
-                            // Rostro de Encargado reconocido
                             const idEstudiante = match.label.split('_')[0];
                             const nombreEstudiante = db.personas[idEstudiante]?.nombre || "";
 
@@ -1206,7 +1210,6 @@
                                 }, 1500);
                             }
                         } else {
-                            // Estudiante/Personal propio consultando
                             playSuccessSound();
                             ctx.fillStyle = "rgba(0, 217, 255, 0.9)"; ctx.font = "14px Arial";
                             ctx.fillText(`✅ Perfil: ${db.personas[match.label]?.nombre}`, box.x, box.y - 10);
@@ -1352,7 +1355,6 @@
                 tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; color: var(--text-muted);'>No hay reportes de escaneos lejanos.</td></tr>";
                 return;
             }
-            // Mostrar últimos primero
             logsLejanosGlobal.slice().reverse().forEach(log => {
                 tbody.insertAdjacentHTML('beforeend', `
                     <tr>
@@ -1371,7 +1373,47 @@
 
         // --- Botones Superiores de Administración ---
         function editarNumeroJunta() { let n = prompt("Número de contacto general para WhatsApp:", NUMERO_OFICIAL_JUNTA); if(n) { database.ref('config/numeroOficial').set(n); alert("Actualizado."); } }
-        function cambiarFondo() { let url = prompt("Ingrese URL de la imagen de fondo:"); if(url){ localStorage.setItem('CUSTOM_BG', url); document.body.style.backgroundImage = `url(${url})`; } else if (url === "") { localStorage.removeItem('CUSTOM_BG'); document.body.style.backgroundImage = 'none'; } }
+        
+        // MODIFICADO: Subida de Foto del Dispositivo con Compresión
+        function cambiarFondoUpload() { 
+            document.getElementById('bgUploader').click(); 
+        }
+
+        function procesarSubidaFondo(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width;
+                    let h = img.height;
+                    const maxW = 1920; // Redimensionar si es muy grande para no bloquear localStorage
+                    if (w > maxW) {
+                        h = Math.round(h * maxW / w);
+                        w = maxW;
+                    }
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.6); // Compresión al 60%
+                    
+                    try {
+                        localStorage.setItem('CUSTOM_BG', dataUrl);
+                        document.body.style.backgroundImage = `url(${dataUrl})`;
+                        alert('Fondo de pantalla actualizado con éxito desde su dispositivo.');
+                    } catch(err) {
+                        alert('La imagen es demasiado pesada para el navegador. Intente subir una foto de menor calidad.');
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
         function cambiarPasswordMaster() { let n = prompt("Nueva Clave de Administrador:"); if(n){ passMaster=n; localStorage.setItem('PASS_MASTER',n); alert('Clave administrativa actualizada'); } }
         function cambiarPasswordEscaner() { let n = prompt("Nueva Clave de Escáner Facial:", passEscaner); if(n){ passEscaner=n; localStorage.setItem('PASS_SCAN',n); alert('Clave de acceso al escáner actualizada'); } }
         
@@ -1505,6 +1547,23 @@
             window.open(`https://wa.me/506${tel.replace(/\D/g,'')}?text=${msj}`, '_blank');
         }
 
+        // Justificar una ausencia mediante la creación de un pseudo-log especial
+        function justificarAusencia(id, nombre) {
+            const hISO = document.getElementById('reportDate').value;
+            if(confirm(`¿Desea justificar la ausencia de ${nombre} para la fecha ${hISO}?`)) {
+                database.ref('logs').push({ 
+                    id: id, 
+                    nombre: nombre, 
+                    hora: new Date().toLocaleString(), 
+                    fechaISO: hISO, 
+                    tipo: 'JUSTIFICADA',
+                    lejano: false,
+                    distanciaMetros: 0
+                });
+                alert('La ausencia ha sido justificada con éxito. Se ha marcado con una ⭐.');
+            }
+        }
+
         // --- Generación de Carnés QR ---
         function descargarCarnet(id) {
             const p = db.personas[id];
@@ -1576,7 +1635,8 @@
                     s.forEach(c => { 
                         let l=c.val(); 
                         let alertTag = l.lejano ? ` <span style="color:var(--accent-danger); font-size: 0.75rem;">(Lejos de Escuela: ${l.distanciaMetros}m)</span>` : "";
-                        list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #3a4560;"><span>${l.hora}</span> - <b style="color:${l.tipo==='ENTRADA'?'#00ff88':'#ff4444'}">${l.tipo}</b>${alertTag}</div>` + list.innerHTML; 
+                        let statusColor = l.tipo === 'ENTRADA' ? '#00ff88' : (l.tipo === 'SALIDA' ? '#ff4444' : '#ffb800');
+                        list.innerHTML = `<div style="padding:10px; border-bottom:1px solid #3a4560;"><span>${l.hora}</span> - <b style="color:${statusColor}">${l.tipo}</b>${alertTag}</div>` + list.innerHTML; 
                     }); 
                 }
                 else { list.innerHTML = "<p style='color: var(--text-muted); text-align:center;'>Sin registros el día de hoy.</p>"; }
@@ -1608,34 +1668,43 @@
 
             if(tipo === 'ENTRADA' || tipo === 'SALIDA') {
                 titulo.innerText = tipo === 'ENTRADA' ? `✅ Llegaron` : `🚪 Salieron`;
-                head.innerHTML = `<tr><th>Hora</th><th>Identificación</th><th>Nombre</th><th>Sección</th><th>Estado Distancia</th></tr>`;
+                head.innerHTML = `<tr><th>Hora</th><th>Identificación</th><th>Nombre</th><th>Sección</th><th>Emoción</th><th>Estado Distancia</th></tr>`;
                 logsDelDia.filter(l => l.tipo === tipo).forEach(l => {
                     const p = db.personas[l.id] || {}; let h = l.hora.includes(',') ? l.hora.split(',')[1] : l.hora;
-                    let estDist = l.lejano ? `<span style="color:var(--accent-danger); font-weight:bold;">⚠️ Lejano (${l.distanciaMetros}m)</span>` : `<span style="color:var(--accent-success);">En Escuela</span>`;
-                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${h}</td><td><b>${l.id}</b></td><td>${l.nombre}</td><td>${p.puesto || '-'}</td><td>${estDist}</td></tr>`);
+                    let estDist = l.lejano ? `<span style="color:var(--accent-warning); font-weight:bold;">⭐ Lejano (${l.distanciaMetros}m)</span>` : `<span style="color:var(--accent-success);">En Escuela</span>`;
+                    let emoInfo = l.emoticon ? `<span style="font-size:1.2rem;" title="${l.emocion}">${l.emoticon}</span>` : '😐';
+                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${h}</td><td><b>${l.id}</b></td><td>${l.nombre}</td><td>${p.puesto || '-'}</td><td>${emoInfo}</td><td>${estDist}</td></tr>`);
                 });
             } else if(tipo === 'TODOS') {
                 titulo.innerText = `📋 Todos los Movimientos`;
-                head.innerHTML = `<tr><th>Hora</th><th>Identificación</th><th>Nombre</th><th>Tipo</th><th>Sección</th><th>Estado Distancia</th></tr>`;
-                logsDelDia.forEach(l => {
+                head.innerHTML = `<tr><th>Hora</th><th>Identificación</th><th>Nombre</th><th>Tipo</th><th>Sección</th><th>Emoción</th><th>Estado Distancia</th></tr>`;
+                logsDelDia.filter(l => l.tipo !== 'JUSTIFICADA').forEach(l => {
                     const p = db.personas[l.id] || {}; let h = l.hora.includes(',') ? l.hora.split(',')[1] : l.hora;
-                    let estDist = l.lejano ? `<span style="color:var(--accent-danger); font-weight:bold;">⚠️ Lejano (${l.distanciaMetros}m)</span>` : `<span style="color:var(--accent-success);">En Escuela</span>`;
-                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${h}</td><td><b>${l.id}</b></td><td>${l.nombre}</td><td><span class="status-badge ${l.tipo === 'ENTRADA' ? 'status-in' : 'status-none'}">${l.tipo}</span></td><td>${p.puesto || '-'}</td><td>${estDist}</td></tr>`);
+                    let estDist = l.lejano ? `<span style="color:var(--accent-warning); font-weight:bold;">⭐ Lejano (${l.distanciaMetros}m)</span>` : `<span style="color:var(--accent-success);">En Escuela</span>`;
+                    let emoInfo = l.emoticon ? `<span style="font-size:1.2rem;" title="${l.emocion}">${l.emoticon}</span>` : '😐';
+                    cuerpo.insertAdjacentHTML('beforeend', `<tr><td>${h}</td><td><b>${l.id}</b></td><td>${l.nombre}</td><td><span class="status-badge ${l.tipo === 'ENTRADA' ? 'status-in' : 'status-none'}">${l.tipo}</span></td><td>${p.puesto || '-'}</td><td>${emoInfo}</td><td>${estDist}</td></tr>`);
                 });
             } else {
-                titulo.innerText = `❌ Ausentes`;
-                head.innerHTML = `<tr><th>Identificación</th><th>Nombre</th><th>Sección</th><th>WhatsApp</th><th class="no-print">Acción</th></tr>`;
+                titulo.innerText = `❌ Ausentes / ⭐ Justificados`;
+                head.innerHTML = `<tr><th>Estado</th><th>Identificación</th><th>Nombre</th><th>Sección</th><th>WhatsApp</th><th class="no-print">Acción</th></tr>`;
                 const presentes = [...new Set(logsDelDia.filter(l => l.tipo === 'ENTRADA').map(l => l.id))];
+                const justificados = [...new Set(logsDelDia.filter(l => l.tipo === 'JUSTIFICADA').map(l => l.id))];
+                
                 Object.entries(db.personas).forEach(([id, p]) => {
                     if(!presentes.includes(id)) {
+                        const isJustificado = justificados.includes(id);
+                        const estadoTag = isJustificado ? `<span style="color:var(--accent-warning); font-weight:bold;">⭐ Justificado</span>` : `<span style="color:var(--accent-danger); font-weight:bold;">❌ Ausente</span>`;
+
                         cuerpo.insertAdjacentHTML('beforeend', `
                             <tr>
+                                <td>${estadoTag}</td>
                                 <td><b>${id}</b></td>
                                 <td>${p.nombre}</td>
                                 <td>${p.puesto || '-'}</td>
                                 <td>${p.telefono || 'Sin teléfono'}</td>
-                                <td class="no-print">
-                                    <button class="btn btn-s" style="padding: 4px 8px; font-size: 0.75rem;" onclick="enviarWA_Ausente('${p.telefono || ''}', '${p.nombre}')">💬 Notificar Ausencia</button>
+                                <td class="no-print" style="display:flex; gap: 5px;">
+                                    ${!isJustificado ? `<button class="btn btn-m" style="padding: 4px 8px; font-size: 0.75rem;" onclick="justificarAusencia('${id}', '${p.nombre}')">✅ Justificar</button>` : ''}
+                                    <button class="btn btn-s" style="padding: 4px 8px; font-size: 0.75rem;" onclick="enviarWA_Ausente('${p.telefono || ''}', '${p.nombre}')">💬 Msg</button>
                                 </td>
                             </tr>
                         `);
