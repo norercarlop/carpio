@@ -273,12 +273,8 @@
             <p id="scan-ai-status" class="ai-status">Esperando activación...</p>
 
             <button id="btnCamaraMain" class="btn btn-i btn-full" onclick="toggleScanner()">🟢 Iniciar Escáner</button>
-            
-            <div style="text-align: center; margin: 15px 0; color: var(--text-muted); font-size: 0.9rem;">
-                - O ingreso manual -
-            </div>
-            <input type="text" id="lector" placeholder="Escribir cédula y presionar Enter..." style="text-align:center;">
 
+            <!-- Resultado de escaneo exitoso -->
             <div id="resBox">
                 <h2 id="resNombre"></h2>
                 <h3 id="resMov"></h3>
@@ -337,7 +333,8 @@
                     <button class="btn btn-m" onclick="sincronizarConNube()">💾 GUARDAR</button>
                     <button class="btn btn-s" onclick="imprimirTodosLosCarnets()">📇 CARNÉS</button>
                     <button class="btn btn-dark" onclick="document.getElementById('csvFile').click()">📤 IMPORTAR</button>
-                    <button class="btn btn-w" onclick="exportarCSV()">📥 EXPORTAR</button>
+                    <button class="btn btn-w" onclick="exportarCSV()">📥 EXPORTAR CSV</button>
+                    <button class="btn btn-d" style="border-color: var(--accent-danger);" onclick="exportarPDFMiembros()">📕 EXPORTAR PDF</button>
                     <button class="btn btn-i" onclick="duplicarMiembro()">👥 DUPLICAR</button>
                     <input type="file" id="csvFile" accept=".csv" style="display:none;" onchange="importarCSV()">
                     <span id="admin-ai-status" class="ai-status" style="margin-left: 15px;">IA No cargada</span>
@@ -347,7 +344,7 @@
             
             <input type="text" id="busqueda" placeholder="🔍 Buscar..." onkeyup="filtrarRapido()">
             
-            <table>
+            <table id="tabla-miembros-pdf">
                 <thead>
                     <tr>
                         <th>Estado</th>
@@ -377,7 +374,7 @@
                     <button class="btn btn-i" onclick="filtrarVistaReporte('TODOS')">📋 Todos</button>
                 </div>
                 <div style="display:flex; gap:5px; margin-top:10px;">
-                    <button class="btn btn-w" onclick="exportarPDFReporte()">📕 PDF</button>
+                    <button class="btn btn-w" onclick="exportarPDFReporte()">📕 PDF REPORTE</button>
                     <button class="btn btn-dark" onclick="if(confirm('¿Borrar historial del día?')) borrarHistorialDia();">🗑️ Borrar Día</button>
                 </div>
             </div>
@@ -440,6 +437,41 @@
         // Cargar imagen de fondo si existe
         if(localStorage.getItem('CUSTOM_BG')) {
             document.body.style.backgroundImage = `url(${localStorage.getItem('CUSTOM_BG')})`;
+        }
+
+        // ============================================
+        // FUNCIONES DE SONIDO
+        // ============================================
+        function playSuccessSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Primer beep
+                const osc = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+                osc.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, ctx.currentTime); // A5
+                gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.15);
+                
+                // Segundo beep agudo
+                setTimeout(() => {
+                    const osc2 = ctx.createOscillator();
+                    const gain2 = ctx.createGain();
+                    osc2.connect(gain2);
+                    gain2.connect(ctx.destination);
+                    osc2.type = 'sine';
+                    osc2.frequency.setValueAtTime(1046.50, ctx.currentTime); // C6
+                    gain2.gain.setValueAtTime(0.1, ctx.currentTime);
+                    osc2.start();
+                    osc2.stop(ctx.currentTime + 0.2);
+                }, 150);
+            } catch(e) {
+                console.log("Audio Web no soportado por este navegador.");
+            }
         }
 
         // ============================================
@@ -531,23 +563,37 @@
                 let tipo = "";
                 if (!tieneE) tipo = "ENTRADA"; 
                 else if (!tieneS) tipo = "SALIDA"; 
-                else { mostrarMensajeTemp("Ya registró Entrada y Salida hoy.", "var(--accent-warning)"); return; }
+                else { 
+                    mostrarMensajeTemp("Ya registró Entrada y Salida hoy.", "var(--accent-warning)"); 
+                    if(scannerActivo) toggleScanner(); // Detenemos el escáner si hay error para evitar spam
+                    return; 
+                }
                 
                 database.ref('logs').push({ id: id, nombre: db.personas[id].nombre, hora: new Date().toLocaleString(), fechaISO: hISO, tipo: tipo });
                 
+                // Emite el sonido de éxito
+                playSuccessSound();
+
+                // Muestra la tarjeta de confirmación
                 const res = document.getElementById('resBox'); 
                 res.style.display = 'block'; 
                 res.style.background = tipo === "ENTRADA" ? "rgba(0, 255, 136, 0.1)" : "rgba(255, 68, 68, 0.1)";
-                document.getElementById('resNombre').innerText = db.personas[id].nombre; 
-                document.getElementById('resMov').innerText = (tipo === "ENTRADA" ? "✅ Entrada" : "🚪 Salida") + " Registrada";
+                document.getElementById('resNombre').innerText = "✅ " + db.personas[id].nombre; 
+                document.getElementById('resMov').innerText = (tipo === "ENTRADA" ? "Entrada" : "Salida") + " Registrada";
                 
-                document.getElementById('scan-video-container').style.borderColor = "var(--accent-success)";
+                // Desactiva el escáner automáticamente volviendo al estado inicial
+                if(scannerActivo) {
+                    toggleScanner();
+                }
+
+                // Oculta el mensaje después de unos segundos
                 setTimeout(() => {
                     res.style.display = 'none';
-                    document.getElementById('scan-video-container').style.borderColor = "var(--accent-primary)";
-                }, 3000);
+                }, 3500);
+
             } else {
                 mostrarMensajeTemp("ID no reconocido.", "var(--accent-danger)");
+                if(scannerActivo) toggleScanner();
             }
         }
 
@@ -556,10 +602,6 @@
             const old = status.innerText; status.innerText = msg; status.style.color = color;
             setTimeout(() => { status.innerText = old; status.style.color = "var(--accent-warning)"; }, 3000);
         }
-
-        document.getElementById('lector').addEventListener('keydown', (e) => {
-            if(e.key === 'Enter' && e.target.value.trim() !== '') { procesarEscaneo(e.target.value); e.target.value = ''; }
-        });
 
         // ============================================
         // ESCÁNER FACIAL E IA
@@ -579,13 +621,13 @@
                     btn.innerText = "🛑 Detener Escáner"; btn.classList.replace('btn-i', 'btn-d');
                     scannerActivo = true;
                     video.addEventListener('play', loopReconocimiento);
-                    actualizarEstadoIA("👁️ Escáner Activo.");
+                    actualizarEstadoIA("👁️ Escáner Activo. Mire a la cámara.");
                 } catch (err) { alert("Error con la cámara."); }
             } else {
                 detenerCamaras();
                 container.classList.remove('active', 'scanning');
                 btn.innerText = "🟢 Iniciar Escáner"; btn.classList.replace('btn-d', 'btn-i');
-                scannerActivo = false; actualizarEstadoIA("IA en pausa.");
+                scannerActivo = false; actualizarEstadoIA("IA en espera.");
             }
         }
 
@@ -610,8 +652,10 @@
                     if(match.label !== 'unknown') {
                         ctx.fillStyle = "rgba(0, 255, 136, 0.8)"; ctx.font = "16px Arial";
                         ctx.fillText(db.personas[match.label]?.nombre || match.label, box.x, box.y - 10);
+                        
+                        enCooldown = true; // Prevenir múltiples escaneos simultáneos
                         procesarEscaneo(match.label);
-                        enCooldown = true; setTimeout(() => { enCooldown = false; }, 4000); 
+                        setTimeout(() => { enCooldown = false; }, 4000); 
                     } else {
                         ctx.fillStyle = "rgba(255, 68, 68, 0.8)"; ctx.font = "16px Arial"; ctx.fillText("Desconocido", box.x, box.y - 10);
                     }
@@ -722,6 +766,28 @@
             r.readAsText(f); 
         }
         function exportarCSV() { let csv = 'Código,Nombre,Sección,WhatsApp\n'; Object.entries(db.personas).forEach(([id, p]) => { csv += `${id},${p.nombre},${p.puesto || ''},${p.telefono || ''}\n`; }); const link = document.createElement('a'); link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); link.download = `Miembros_${new Date().toISOString().split('T')[0]}.csv`; link.click(); }
+        
+        function exportarPDFMiembros() {
+            const { jsPDF } = window.jspdf; 
+            const doc = new jsPDF();
+            
+            doc.text("Lista General de Estudiantes Registrados", 14, 20);
+            
+            const bodyData = [];
+            Object.entries(db.personas).forEach(([id, p]) => {
+                bodyData.push([id, p.nombre || '', p.puesto || '', p.telefono || '']);
+            });
+
+            doc.autoTable({ 
+                head: [['Código / Cédula', 'Nombre Completo', 'Sección', 'WhatsApp']],
+                body: bodyData,
+                startY: 30,
+                theme: 'grid'
+            });
+            
+            doc.save(`Lista_Estudiantes_${new Date().toLocaleDateString('sv-SE')}.pdf`);
+        }
+        
         function duplicarMiembro() { const id = prompt('Código a duplicar:'); if(id && db.personas[id]) { const newId = prompt('Nuevo código para el duplicado:'); if(newId) { db.personas[newId] = {...db.personas[id]}; renderAlumnos(); alert('Usuario duplicado'); } } }
         function mostrarConfirmacionBorrar() { if(confirm('⚠️ ADVERTENCIA: ¿Borrar TODA la base de datos (Miembros y Logs)?\n\nPresione OK para confirmar.')) { database.ref('personas').remove(); database.ref('logs').remove(); location.reload(); } }
         
@@ -811,7 +877,7 @@
             doc.save(`Reporte_Asistencia_${document.getElementById('reportDate').value}.pdf`);
         }
 
-        function mostrarAyuda(t) { alert("SISTEMA DE RECONOCIMIENTO FACIAL\n\n1. Asegúrese de que el estudiante esté registrado y tenga su rostro guardado en el sistema (Admin).\n2. Presione 'Iniciar Escáner'.\n3. El estudiante debe mirar a la cámara. Si hay coincidencia, la asistencia se registrará sola."); }
+        function mostrarAyuda(t) { alert("SISTEMA DE RECONOCIMIENTO FACIAL\n\n1. Presione 'Iniciar Escáner'.\n2. El estudiante debe mirar a la cámara.\n3. Una vez confirmado con el check verde y el sonido, el escáner se apagará y estará listo para que la siguiente persona repita el paso 1."); }
 
     </script>
 </body>
