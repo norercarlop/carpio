@@ -7,14 +7,18 @@
     <meta name="description" content="Sistema de asistencia con IA - Escuela La Carpio">
     <title>Asistencia Facial - Escuela La Carpio</title>
     
+    <!-- Firebase (Usando versión 8 por compatibilidad con el código base) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     
+    <!-- Face-API.js (Reconocimiento Facial) -->
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     
+    <!-- QR Code (Para generación de carnés) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
+    <!-- PDF Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     
@@ -298,9 +302,11 @@
 </head>
 <body>
 
+    <!-- INPUTS OCULTOS PARA FONDOS Y LOGOS -->
     <input type="file" id="bgUploader" accept="image/*" style="display:none;" onchange="procesarSubidaFondo(event)">
     <input type="file" id="logoUploader" accept="image/png, image/jpeg" style="display:none;" onchange="procesarSubidaLogo(event)">
 
+    <!-- NAVBAR -->
     <div class="navbar no-print" id="main-navbar">
         <div class="navbar-title" id="nav-logo-container">🤖 Asistencia IA</div>
         <div class="navbar-actions">
@@ -311,11 +317,13 @@
         </div>
     </div>
 
+    <!-- VISTA INACTIVA (HOME/LOGIN LIMPIO) -->
     <div id="home-view" onclick="mostrarVista('parent-view')">
         <div class="home-clock" id="home-clock-time">--:--</div>
         <div class="home-subtitle">👆 Toque la pantalla o navegue en el menú superior para empezar</div>
     </div>
 
+    <!-- MODAL DE INICIO DE SESIÓN CON FIREBASE AUTH -->
     <div id="login-modal" class="modal-overlay">
         <div class="card" style="max-width: 400px; text-align: center;">
             <h2 id="login-title">🔒 Control de Acceso</h2>
@@ -332,6 +340,7 @@
         </div>
     </div>
 
+    <!-- VISTA DE REGISTRO MULTI-PERFIL -->
     <div id="register-view">
         <div class="card" style="max-width: 650px; width: 100%;">
             <h2 style="text-align: center;">📝 Registro Oficial de Usuarios</h2>
@@ -378,6 +387,7 @@
         <div class="credits-footer">prodigital-72284602 • Derechos Reservados</div>
     </div>
 
+    <!-- VISTA DE ESCANEO FACIAL -->
     <div id="scan-view">
         <div class="card" style="max-width: 550px;">
             <h2 style="text-align: center;">🤖 Asistencia de Estudiantes</h2>
@@ -392,6 +402,7 @@
 
             <button id="btnCamaraMain" class="btn btn-i btn-full" onclick="toggleScanner()">🟢 Iniciar Escáner</button>
 
+            <!-- Resultado de escaneo exitoso con Emociones -->
             <div id="resBox">
                 <h2 id="resNombre"></h2>
                 <h3 id="resMov"></h3>
@@ -405,10 +416,12 @@
         <div class="credits-footer">prodigital-72284602 • Derechos Reservados</div>
     </div>
 
+    <!-- VISTA DE CONSULTA PADRES Y ESTUDIANTES -->
     <div id="parent-view">
         <div class="card" style="max-width: 520px;">
             <h2>👁️ Consulta de Asistencia por Rostro / ID</h2>
             
+            <!-- Cámara de Consulta Directa -->
             <div id="query-video-container" class="video-container">
                 <video id="query-video" autoplay muted playsinline></video>
                 <canvas id="query-canvas"></canvas>
@@ -425,6 +438,7 @@
             <input type="text" id="parentInput" placeholder="Cédula o código del estudiante..." style="text-align:center;">
             <button class="btn btn-s btn-full" onclick="consultarPadre()">Buscar por ID</button>
             
+            <!-- Resultados de consulta -->
             <div id="parentResult" style="display:none; margin-top:20px;">
                 <div style="background: var(--bg-hover); padding:16px; border-radius:10px; border:1px solid var(--border-subtle); margin-bottom:15px;">
                     <h3 id="parentStudentName" style="color:var(--accent-primary); margin-bottom:5px;"></h3>
@@ -439,6 +453,7 @@
         <div class="credits-footer">prodigital-72284602 • Derechos Reservados</div>
     </div>
 
+    <!-- PANEL MAESTRO -->
     <div id="master-panel">
         <div class="panel-header">
             <h1>⚙️ Administración</h1>
@@ -458,6 +473,7 @@
             <button id="tab3" class="tab-btn" onclick="cambiarTab(3)">🌍 Geolocalización e Historial Lejano</button>
         </div>
 
+        <!-- SECCIÓN MIEMBROS -->
         <div id="sec-alumnos">
             <div class="power-bar no-print">
                 <div class="power-bar-actions">
@@ -494,6 +510,7 @@
             </table>
         </div>
 
+        <!-- SECCIÓN REPORTE -->
         <div id="sec-reporte" style="display:none;">
             <div class="power-bar no-print">
                 <div style="display:flex; gap:10px; align-items:center;">
@@ -518,6 +535,7 @@
             </table>
         </div>
 
+        <!-- SECCIÓN GEOLOCALIZACIÓN -->
         <div id="sec-geolocalizacion" style="display:none;">
             <div class="power-bar">
                 <h3 style="color: var(--accent-primary); margin-bottom: 10px;">📍 Configuración de Geocerca del Centro Educativo</h3>
@@ -560,6 +578,7 @@
         <div class="credits-footer" style="padding: 20px 0;">prodigital-72284602 • Derechos Reservados</div>
     </div>
 
+    <!-- MODAL DE CAPTURA DE ROSTRO (ADMIN) -->
     <div id="face-modal" class="modal-overlay">
         <div class="card" style="text-align:center; max-width: 500px;">
             <h2 id="modalFaceTitle">📸 Registrar Rostro</h2>
@@ -656,10 +675,10 @@
 
             if (tipo === 'admin') {
                 title.innerHTML = "🔓 Panel de Administrador";
-                emailInput.value = "juntacarpio@mep.com"; // Autocompletar como solicitaste
+                emailInput.value = "juntacarpio@mep.com"; // Autocompletar Admin
             } else if (tipo === 'escaner') {
                 title.innerHTML = "📷 Escáner de Asistencia";
-                emailInput.value = "juntaIA@mep.com"; // Autocompletar como solicitaste
+                emailInput.value = "juntaIA@mep.com"; // Autocompletar Escáner
             }
 
             modal.style.display = 'flex';
@@ -1096,7 +1115,7 @@
                         playErrorSound();
                         
                         if(scannerActivo) toggleScanner();
-                        return;
+                        return; // Se aborta el registro de la asistencia oficial
                     }
 
                     completarEscaneoBD(id, hISO, esLejano, dist, strEmocion, emoticon);
